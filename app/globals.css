@@ -1,0 +1,259 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Identidade visual PIBAC
+     #00C2FF  cyan brilhante (highlight)
+     #020B21  azul quase preto (texto/contraste escuro)
+     #0A2973  azul profundo  (primary / principal)
+     #FFFFFF  branco (background)
+     #FF2A2A  vermelho (apenas detalhes)
+  */
+  --brand-cyan: #00C2FF;
+  --brand-navy: #020B21;
+  --brand-blue: #0A2973;
+  --brand-white: #FFFFFF;
+  --brand-red: #FF2A2A;
+
+  --background: #FFFFFF;
+  --foreground: #020B21;
+  --card: #FFFFFF;
+  --card-foreground: #020B21;
+  --popover: #FFFFFF;
+  --popover-foreground: #020B21;
+  --primary: #0A2973;
+  --primary-foreground: #FFFFFF;
+  --secondary: #00C2FF;
+  --secondary-foreground: #020B21;
+  --muted: #F3F6FC;
+  --muted-foreground: #4A5A7A;
+  --accent: #00C2FF;
+  --accent-foreground: #020B21;
+  --destructive: #FF2A2A;
+  --destructive-foreground: #FFFFFF;
+  --border: #E2E8F4;
+  --input: #E2E8F4;
+  --ring: #00C2FF;
+  --chart-1: #0A2973;
+  --chart-2: #00C2FF;
+  --chart-3: #FF2A2A;
+  --chart-4: #4A5A7A;
+  --chart-5: #020B21;
+  --radius: 0.75rem;
+  --sidebar: #F8FAFD;
+  --sidebar-foreground: #020B21;
+  --sidebar-primary: #0A2973;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E6F7FF;
+  --sidebar-accent-foreground: #0A2973;
+  --sidebar-border: #E2E8F4;
+  --sidebar-ring: #00C2FF;
+}
+
+.dark {
+  --background: #020B21;
+  --foreground: #FFFFFF;
+  --card: #0A1330;
+  --card-foreground: #FFFFFF;
+  --popover: #0A1330;
+  --popover-foreground: #FFFFFF;
+  --primary: #00C2FF;
+  --primary-foreground: #020B21;
+  --secondary: #0A2973;
+  --secondary-foreground: #FFFFFF;
+  --muted: #0E1A3A;
+  --muted-foreground: #9AB3DC;
+  --accent: #00C2FF;
+  --accent-foreground: #020B21;
+  --destructive: #FF2A2A;
+  --destructive-foreground: #FFFFFF;
+  --border: #14244B;
+  --input: #14244B;
+  --ring: #00C2FF;
+  --chart-1: #00C2FF;
+  --chart-2: #0A2973;
+  --chart-3: #FF2A2A;
+  --chart-4: #9AB3DC;
+  --chart-5: #FFFFFF;
+  --sidebar: #0A1330;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #00C2FF;
+  --sidebar-primary-foreground: #020B21;
+  --sidebar-accent: #0E1A3A;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #14244B;
+  --sidebar-ring: #00C2FF;
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Geist', 'Geist Fallback', sans-serif;
+  --font-serif: 'Merriweather', 'Georgia', serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-red: var(--brand-red);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 6px;
+  border: 2px solid var(--muted);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Selection */
+::selection {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* Gradiente utilitário */
+.bg-brand-gradient {
+  background: linear-gradient(135deg, #020B21 0%, #0A2973 60%, #0A2973 100%);
+}
+
+.bg-brand-gradient-cyan {
+  background: linear-gradient(135deg, #0A2973 0%, #00C2FF 100%);
+}
+
+.text-brand-gradient {
+  background: linear-gradient(135deg, #0A2973, #00C2FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Animações personalizadas */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulseSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.7s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.7s ease-out forwards;
+}
+
+.animate-pulse-soft {
+  animation: pulseSoft 2.4s ease-in-out infinite;
+}
+
+/* Hover lift utility */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(10, 41, 115, 0.25);
+}
+
+/* Glow effect */
+.glow-cyan {
+  box-shadow: 0 0 24px rgba(0, 194, 255, 0.35);
+}
+
+/* Divider fancy */
+.divider-brand {
+  background: linear-gradient(90deg, transparent, #00C2FF, transparent);
+  height: 2px;
+  border: 0;
+}
