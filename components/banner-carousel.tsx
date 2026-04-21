@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Banner {
@@ -22,13 +21,12 @@ interface BannerCarouselProps {
 }
 
 export function BannerCarousel({ banners, variant = 'hero', autoplayDelay = 5000 }: BannerCarouselProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
-    Autoplay({ delay: autoplayDelay, stopOnInteraction: false })
+  // loop + dragFree habilitam arrastar nativamente; Autoplay faz o carrossel andar sozinho.
+  // stopOnInteraction:false garante que o autoplay retome após o usuário soltar o arrasto.
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, dragFree: false }, [
+    Autoplay({ delay: autoplayDelay, stopOnInteraction: false, stopOnMouseEnter: true })
   ])
   const [selectedIndex, setSelectedIndex] = useState(0)
-
-  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
-  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return
@@ -48,10 +46,10 @@ export function BannerCarousel({ banners, variant = 'hero', autoplayDelay = 5000
 
   return (
     <div className={cn(
-      'relative overflow-hidden',
+      'relative overflow-hidden select-none',
       isHero ? 'h-[500px] md:h-[600px]' : 'h-[200px] md:h-[250px] rounded-lg'
     )}>
-      <div ref={emblaRef} className="h-full">
+      <div ref={emblaRef} className="h-full cursor-grab active:cursor-grabbing">
         <div className="flex h-full">
           {banners.map((banner) => (
             <div
@@ -107,29 +105,7 @@ export function BannerCarousel({ banners, variant = 'hero', autoplayDelay = 5000
         </div>
       </div>
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={scrollPrev}
-        className={cn(
-          'absolute left-4 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card text-foreground rounded-full shadow-lg transition-all',
-          isHero ? 'p-3' : 'p-2'
-        )}
-        aria-label="Banner anterior"
-      >
-        <ChevronLeft className={isHero ? 'h-6 w-6' : 'h-4 w-4'} />
-      </button>
-      <button
-        onClick={scrollNext}
-        className={cn(
-          'absolute right-4 top-1/2 -translate-y-1/2 bg-card/80 hover:bg-card text-foreground rounded-full shadow-lg transition-all',
-          isHero ? 'p-3' : 'p-2'
-        )}
-        aria-label="Próximo banner"
-      >
-        <ChevronRight className={isHero ? 'h-6 w-6' : 'h-4 w-4'} />
-      </button>
-
-      {/* Dots */}
+      {/* Dots — indicadores de posição (sem setas; navegação por arrasto + autoplay) */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
         {banners.map((_, index) => (
           <button

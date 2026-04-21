@@ -75,15 +75,15 @@ export function Header() {
       )}
     >
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
-        <div className="flex h-18 md:h-20 items-center justify-between gap-4 py-2">
+        <div className="flex h-20 md:h-24 items-center justify-between gap-4 py-2">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative h-12 w-12 md:h-14 md:w-14 shrink-0">
+            <div className="relative h-16 w-16 md:h-20 md:w-20 shrink-0">
               <Image
                 src="/logo.png"
                 alt="Primeira Igreja Batista de Capim Grosso"
                 fill
-                sizes="56px"
+                sizes="(min-width: 768px) 80px, 64px"
                 className="object-contain transition-transform duration-300 group-hover:scale-105"
                 priority
               />
