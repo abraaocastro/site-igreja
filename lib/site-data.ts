@@ -23,9 +23,10 @@ export interface ChurchAddress {
 }
 
 export interface ChurchContact {
-  telefone: string
-  whatsapp: string
-  email: string
+  // Telefone fixo: pode ser null (esta igreja só atende via WhatsApp).
+  telefone: string | null
+  whatsapp: string | null
+  email: string | null
 }
 
 export interface ChurchSocial {
@@ -39,9 +40,18 @@ export interface ChurchSocial {
 export interface ChurchPastor {
   nome: string
   titulo: string
-  bio: string
+  // Bio em múltiplos parágrafos. Cada item do array é um <p>.
+  bio: string[]
   foto: string
   instagram: string | null
+}
+
+export type PixTipo = 'email' | 'cpf' | 'cnpj' | 'telefone' | 'aleatoria'
+
+export interface ChurchPix {
+  chave: string
+  tipo: PixTipo
+  titular: string
 }
 
 export type AvisoSeveridade = 'info' | 'atencao' | 'urgente'
@@ -62,6 +72,7 @@ export interface Church {
   contato: ChurchContact
   social: ChurchSocial
   pastor: ChurchPastor
+  pix: ChurchPix
   aviso: ChurchAviso
 }
 
@@ -130,10 +141,10 @@ export function formatAddressTwoLines(addr: ChurchAddress): [string, string] {
 }
 
 /**
- * Telefone formatado para display. Se TODO, retorna null.
+ * Telefone formatado para display. Se TODO ou null, retorna null.
  */
-export function formatPhone(phone: string): string | null {
-  if (isTodo(phone)) return null
+export function formatPhone(phone: string | null | undefined): string | null {
+  if (!phone || isTodo(phone)) return null
   // aceita +5574... ou 74...
   const digits = phone.replace(/\D/g, '')
   if (digits.length === 13) {
@@ -147,20 +158,38 @@ export function formatPhone(phone: string): string | null {
 }
 
 /**
- * Link tel: pronto pra <a href>. Retorna null se TODO.
+ * Link tel: pronto pra <a href>. Retorna null se TODO/null.
  */
-export function telHref(phone: string): string | null {
-  if (isTodo(phone)) return null
+export function telHref(phone: string | null | undefined): string | null {
+  if (!phone || isTodo(phone)) return null
   const digits = phone.replace(/\D/g, '')
   return `tel:+${digits.length === 11 ? '55' : ''}${digits}`
 }
 
 /**
- * Link mailto:. Retorna null se TODO.
+ * Link mailto:. Retorna null se TODO/null.
  */
-export function mailtoHref(email: string): string | null {
-  if (isTodo(email)) return null
+export function mailtoHref(email: string | null | undefined): string | null {
+  if (!email || isTodo(email)) return null
   return `mailto:${email}`
+}
+
+/**
+ * Link wa.me pra iniciar conversa no WhatsApp. Retorna null se TODO/null.
+ * Opcional: passe `message` pra pré-preencher a mensagem.
+ */
+export function whatsappHref(
+  whatsapp: string | null | undefined,
+  message?: string
+): string | null {
+  if (!whatsapp || isTodo(whatsapp)) return null
+  const digits = whatsapp.replace(/\D/g, '')
+  if (!digits) return null
+  // wa.me exige o número com DDI, sem símbolos.
+  const withDdi = digits.startsWith('55') ? digits : `55${digits}`
+  const base = `https://wa.me/${withDdi}`
+  if (message) return `${base}?text=${encodeURIComponent(message)}`
+  return base
 }
 
 // ---------- Google Maps helpers ----------
@@ -208,6 +237,17 @@ export function getMapsDirectionsUrl(): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${getMapsQuery()}`
 }
 
+// ---------- PIX ----------
+
+/**
+ * Verdadeiro se a chave PIX ainda não foi configurada (TODO).
+ * Use pra renderizar estado "em breve" em vez da chave fake.
+ */
+export function hasPix(): boolean {
+  const { pix } = getChurch()
+  return !!pix.chave && !isTodo(pix.chave)
+}
+
 // ---------- Schema.org JSON-LD (SEO, base pra Phase 6) ----------
 
 /**
@@ -228,8 +268,9 @@ export function getChurchJsonLd(siteUrl?: string): Record<string, unknown> {
     social.youtube,
   ].filter((u): u is string => typeof u === 'string' && u.length > 0)
 
-  const telephone = isTodo(contato.telefone) ? undefined : contato.telefone
-  const email = isTodo(contato.email) ? undefined : contato.email
+  const telephone =
+    contato.telefone && !isTodo(contato.telefone) ? contato.telefone : undefined
+  const email = contato.email && !isTodo(contato.email) ? contato.email : undefined
   const bairro = isTodo(endereco.bairro) ? undefined : endereco.bairro
 
   return {

@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Youtube, Heart, Navigation } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Youtube, Heart, Navigation, MessageCircle } from 'lucide-react'
 import {
   getChurch,
   formatAddressOneLine,
   formatPhone,
   telHref,
   mailtoHref,
+  whatsappHref,
   getMapsDirectionsUrl,
 } from '@/lib/site-data'
 
@@ -36,8 +37,11 @@ export function Footer() {
   const phoneDisplay = formatPhone(contato.telefone)
   const phoneLink = telHref(contato.telefone)
   const emailLink = mailtoHref(contato.email)
+  const whatsappLink = whatsappHref(contato.whatsapp)
+  const whatsappDisplay = formatPhone(contato.whatsapp)
   const hasEmail = !!emailLink
   const hasPhone = !!phoneLink
+  const hasWhatsapp = !!whatsappLink
   const mapsDirectionsUrl = getMapsDirectionsUrl()
 
   return (
@@ -197,6 +201,20 @@ export function Footer() {
                   <Phone className="h-4 w-4 shrink-0 text-accent" />
                   <a href={phoneLink!} className="opacity-90 hover:opacity-100 hover:text-accent transition">
                     {phoneDisplay}
+                  </a>
+                </li>
+              )}
+              {hasWhatsapp && (
+                <li className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 shrink-0 text-accent" />
+                  <a
+                    href={whatsappLink!}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="opacity-90 hover:opacity-100 hover:text-accent transition"
+                    aria-label="Falar no WhatsApp"
+                  >
+                    {whatsappDisplay} <span className="opacity-70">(WhatsApp)</span>
                   </a>
                 </li>
               )}

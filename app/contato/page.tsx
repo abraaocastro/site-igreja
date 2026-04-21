@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2, Navigation, ExternalLink } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2, Navigation, ExternalLink, MessageCircle } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
 import { toast } from 'sonner'
 import {
@@ -10,6 +10,7 @@ import {
   formatPhone,
   telHref,
   mailtoHref,
+  whatsappHref,
   getMapsEmbedUrl,
   getMapsDirectionsUrl,
   getMapsSearchUrl,
@@ -22,6 +23,11 @@ export default function ContatoPage() {
   const phoneDisplay = formatPhone(contato.telefone)
   const phoneLink = telHref(contato.telefone)
   const emailLink = mailtoHref(contato.email)
+  const whatsappLink = whatsappHref(
+    contato.whatsapp,
+    `Olá! Falo através do site da ${church.nomeCurto}.`
+  )
+  const whatsappDisplay = formatPhone(contato.whatsapp)
   const mapsEmbedUrl = getMapsEmbedUrl()
   const mapsDirectionsUrl = getMapsDirectionsUrl()
   const mapsSearchUrl = getMapsSearchUrl()
@@ -90,6 +96,24 @@ export default function ContatoPage() {
                         className="text-sm text-muted-foreground hover:text-primary transition"
                       >
                         {phoneDisplay}
+                      </a>
+                    </div>
+                  </li>
+                )}
+                {whatsappLink && (
+                  <li className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <MessageCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">WhatsApp</p>
+                      <a
+                        href={whatsappLink}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-sm text-muted-foreground hover:text-primary transition"
+                      >
+                        {whatsappDisplay}
                       </a>
                     </div>
                   </li>

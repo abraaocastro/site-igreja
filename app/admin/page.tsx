@@ -271,6 +271,7 @@ export default function AdminPage() {
             fields={[
               { key: 'name', label: 'Nome', type: 'text' },
               { key: 'leader', label: 'Líder', type: 'text' },
+              { key: 'leaderInstagram', label: 'Instagram do líder (URL)', type: 'text' },
               { key: 'description', label: 'Descrição', type: 'textarea' },
               { key: 'imageUrl', label: 'Imagem (URL)', type: 'image' },
             ]}
@@ -278,6 +279,7 @@ export default function AdminPage() {
               id: crypto.randomUUID(),
               name: 'Novo ministério',
               leader: '',
+              leaderInstagram: null,
               description: '',
               imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&q=80',
             })}

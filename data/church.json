@@ -6,15 +6,15 @@
   "endereco": {
     "rua": "Rua Eldorado",
     "numero": "30",
-    "bairro": "TODO-bairro",
+    "bairro": "Novo Horizonte",
     "cidade": "Capim Grosso",
     "estado": "BA",
     "cep": "44695-000"
   },
 
   "contato": {
-    "telefone": "TODO-telefone",
-    "whatsapp": "TODO-whatsapp",
+    "telefone": null,
+    "whatsapp": "+5574991608059",
     "email": "TODO-email"
   },
 
@@ -23,15 +23,24 @@
     "instagramPastor": "https://www.instagram.com/prsilasbarreto/",
     "instagramJovens": "https://www.instagram.com/rdjmbc/",
     "facebook": null,
-    "youtube": null
+    "youtube": "https://www.youtube.com/@pibaccapimgrosso"
   },
 
   "pastor": {
     "nome": "Silas Barreto",
     "titulo": "Pastor Presidente",
-    "bio": "TODO-bio-oficial",
+    "bio": [
+      "Pastor Presidente da @pibaccapimgrosso.",
+      "Advogado e Mestrando em Teologia."
+    ],
     "foto": "/pastor-silas.png",
     "instagram": "https://www.instagram.com/prsilasbarreto/"
+  },
+
+  "pix": {
+    "chave": "TODO-pix-chave",
+    "tipo": "email",
+    "titular": "Primeira Igreja Batista de Capim Grosso"
   },
 
   "aviso": {

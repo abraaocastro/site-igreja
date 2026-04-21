@@ -52,48 +52,65 @@ export const inlineBanners = [
   },
 ]
 
-export const ministerios = [
+// Ministérios da PIBAC. `leaderInstagram` é opcional (null quando o líder
+// não tem/não divulga o perfil). Nomes reais vieram do questionário v2.0.
+export interface Ministerio {
+  id: string
+  name: string
+  description: string
+  imageUrl: string
+  leader: string
+  leaderInstagram: string | null
+}
+
+export const ministerios: Ministerio[] = [
   {
     id: '1',
     name: 'Louvor e Adoração',
     description: 'Ministério dedicado à adoração através da música, conduzindo a igreja na presença de Deus.',
     imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&q=80',
-    leader: 'João Silva',
+    leader: 'Lucas Barreto',
+    leaderInstagram: 'https://www.instagram.com/lucasbarreto_0/',
   },
   {
     id: '2',
     name: 'Infantil',
     description: 'Cuidando e ensinando nossas crianças no caminho do Senhor com amor e dedicação.',
     imageUrl: 'https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=600&q=80',
-    leader: 'Maria Santos',
+    leader: 'Luana',
+    leaderInstagram: null,
   },
   {
     id: '3',
     name: 'Jovens',
     description: 'Conectando a juventude a Cristo através de comunhão, ensino e missões.',
     imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80',
-    leader: 'Pedro Oliveira',
+    leader: 'Carla Emanuele',
+    leaderInstagram: 'https://www.instagram.com/carlalpcastro/',
   },
   {
     id: '4',
     name: 'Mulheres',
     description: 'Fortalecendo e capacitando mulheres para servir a Deus e à comunidade.',
     imageUrl: 'https://images.unsplash.com/photo-1609234656388-0ff363383899?w=600&q=80',
-    leader: 'Ana Costa',
+    leader: 'Sandra Barreto',
+    leaderInstagram: null,
   },
   {
     id: '5',
     name: 'Homens',
     description: 'Edificando homens segundo o coração de Deus para liderar suas famílias.',
     imageUrl: 'https://images.unsplash.com/photo-1491438590914-bc09fcaaf77a?w=600&q=80',
-    leader: 'Carlos Souza',
+    leader: 'Welder e Vitor',
+    leaderInstagram: null,
   },
   {
     id: '6',
     name: 'Missões',
     description: 'Levando o evangelho além fronteiras, alcançando vidas para Cristo.',
     imageUrl: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=600&q=80',
-    leader: 'Paulo Lima',
+    leader: 'Dirleide Granja',
+    leaderInstagram: null,
   },
 ]
 

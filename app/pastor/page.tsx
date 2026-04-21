@@ -10,13 +10,6 @@ export const metadata: Metadata = {
   description: 'Conheça o Pastor Presidente da Primeira Igreja Batista de Capim Grosso.',
 }
 
-const formacao = [
-  'Bacharel em Teologia pelo Seminário Teológico Batista do Nordeste',
-  'Pós-graduação em Aconselhamento Pastoral',
-  'Curso de Liderança Cristã pela Convenção Batista Brasileira',
-  'Diversos cursos de capacitação ministerial',
-]
-
 const ministerio = [
   { icon: BookOpen, label: 'Pregação Expositiva', description: 'Ensino sistemático da Palavra de Deus' },
   { icon: Heart, label: 'Aconselhamento', description: 'Cuidado pastoral e orientação espiritual' },
@@ -48,10 +41,11 @@ export default function PastorPage() {
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">
                 Pr. {pastor.nome}
               </h1>
-              <p className="text-lg opacity-90 max-w-xl leading-relaxed">
-                Servindo com amor, ensinando com fidelidade e cuidando de cada vida
-                como o Bom Pastor nos ensinou.
-              </p>
+              <div className="text-lg opacity-90 max-w-xl leading-relaxed space-y-2">
+                {pastor.bio.map((paragrafo, i) => (
+                  <p key={i}>{paragrafo}</p>
+                ))}
+              </div>
               <div className="mt-8 flex flex-wrap gap-3">
                 {pastorEmailLink && (
                   <a
@@ -170,47 +164,16 @@ export default function PastorPage() {
             </aside>
 
             <div>
-              <SectionTitle title="Uma Vida Dedicada ao Ministério" centered={false} />
+              <SectionTitle title="Sobre o Pastor" centered={false} />
               <div className="space-y-4 text-muted-foreground leading-relaxed">
+                {pastor.bio.map((paragrafo, i) => (
+                  <p key={i}>{paragrafo}</p>
+                ))}
                 <p>
-                  O Pastor Silas tem entregado a vida ao ministério da Palavra e ao cuidado
-                  pastoral. Desde cedo foi tocado pelo amor de Cristo e decidiu servir ao Senhor
-                  com fidelidade em todas as áreas do ministério.
+                  Como {pastor.titulo} da Primeira Igreja Batista de Capim Grosso, lidera
+                  com paixão pelo Evangelho e amor pelas pessoas, dedicando-se ao ensino da
+                  Palavra, ao aconselhamento pastoral e à formação de novos discípulos.
                 </p>
-                <p>
-                  Após sua formação teológica, iniciou seu caminho pastoreando igrejas da região
-                  e sempre demonstrou zelo pela pregação expositiva, pelo discipulado intencional
-                  e pela formação de novos líderes.
-                </p>
-                <p>
-                  Como Pastor Presidente da Primeira Igreja Batista de Capim Grosso, lidera com
-                  paixão pelo Evangelho e amor pelas pessoas. Sob sua liderança, a igreja tem
-                  crescido em maturidade espiritual, missões e impacto na comunidade.
-                </p>
-                <p>
-                  Ao lado de sua família, tem sido exemplo de dedicação à obra do Senhor, ao
-                  serviço fraterno e à vida cristã autêntica.
-                </p>
-              </div>
-
-              <div className="mt-10">
-                <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-primary" />
-                  Formação Acadêmica
-                </h3>
-                <ul className="grid sm:grid-cols-2 gap-3">
-                  {formacao.map((item, index) => (
-                    <li
-                      key={index}
-                      className="flex items-start gap-3 p-4 bg-card rounded-lg border border-border"
-                    >
-                      <span className="h-7 w-7 rounded-full bg-accent/15 text-primary text-xs font-bold flex items-center justify-center shrink-0">
-                        {index + 1}
-                      </span>
-                      <span className="text-sm text-muted-foreground">{item}</span>
-                    </li>
-                  ))}
-                </ul>
               </div>
             </div>
           </div>

@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Check, Heart, PiggyBank, HandCoins, Gift, QrCode, Landmark } from 'lucide-react'
+import { Copy, Check, Heart, PiggyBank, HandCoins, Gift, QrCode, Landmark, Clock } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { getChurch, hasPix } from '@/lib/site-data'
 
 const METHODS = [
   { id: 'pix', label: 'PIX', icon: QrCode },
@@ -27,14 +28,21 @@ export default function ContribuaPage() {
     setTimeout(() => setCopiado(null), 2000)
   }
 
-  const chavePix = 'tesouraria@pibcapimgrosso.com.br'
-  const banco = {
-    nome: 'Banco do Brasil',
-    agencia: '1234-5',
-    conta: '67890-1',
-    titular: 'Primeira Igreja Batista de Capim Grosso',
-    cnpj: '00.000.000/0001-00',
+  // Dados PIX vindos de data/church.json — ficam com placeholder TODO até a
+  // tesouraria fornecer a chave real. `hasPix()` controla a renderização.
+  const church = getChurch()
+  const pixConfigured = hasPix()
+  const chavePix = church.pix.chave
+  const pixTipoLabel: Record<typeof church.pix.tipo, string> = {
+    email: 'E-mail',
+    cpf: 'CPF',
+    cnpj: 'CNPJ',
+    telefone: 'Telefone',
+    aleatoria: 'Chave aleatória',
   }
+  // Dados bancários: ainda não foram fornecidos pela tesouraria. Mantemos a
+  // aba "Transferência" com um aviso de "em breve" pra não exibir valores falsos.
+  const bancoConfigured = false
 
   return (
     <div>
@@ -137,74 +145,76 @@ export default function ContribuaPage() {
           {method === 'pix' && (
             <div className="bg-card rounded-2xl border border-border p-6 md:p-8 shadow-sm">
               <h3 className="font-serif font-bold text-xl text-foreground mb-4">Contribua via PIX</h3>
-              <div className="grid md:grid-cols-[240px_1fr] gap-6 items-start">
-                <div className="aspect-square bg-muted rounded-xl flex items-center justify-center border border-border">
-                  <div className="text-center">
-                    <QrCode className="h-24 w-24 text-primary mx-auto" />
-                    <p className="text-xs text-muted-foreground mt-2">QR Code PIX</p>
+              {pixConfigured ? (
+                <div className="grid md:grid-cols-[240px_1fr] gap-6 items-start">
+                  <div className="aspect-square bg-muted rounded-xl flex items-center justify-center border border-border">
+                    <div className="text-center">
+                      <QrCode className="h-24 w-24 text-primary mx-auto" />
+                      <p className="text-xs text-muted-foreground mt-2">QR Code PIX</p>
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-3">Chave PIX (E-mail)</p>
-                  <div className="flex items-center gap-2 p-3 rounded-md bg-muted border border-border">
-                    <code className="flex-1 text-sm text-foreground break-all">{chavePix}</code>
-                    <button
-                      onClick={() => copy(chavePix, 'pix')}
-                      className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
-                      aria-label="Copiar chave"
-                    >
-                      {copiado === 'pix' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                    </button>
-                  </div>
-                  {valor && (
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      Ao realizar a transferência, informe o valor de{' '}
-                      <strong className="text-primary">R$ {Number(valor).toFixed(2)}</strong> e a categoria{' '}
-                      <strong className="text-primary capitalize">{tipo}</strong> no campo de mensagem.
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Titular</p>
+                    <p className="text-sm font-medium text-foreground mb-3">{church.pix.titular}</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Chave PIX ({pixTipoLabel[church.pix.tipo]})
                     </p>
-                  )}
-                  <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm text-foreground">
-                    <strong>Dica:</strong> No campo &quot;mensagem&quot; do PIX, informe se é dízimo, oferta ou missões
-                    para facilitar a identificação.
+                    <div className="flex items-center gap-2 p-3 rounded-md bg-muted border border-border">
+                      <code className="flex-1 text-sm text-foreground break-all">{chavePix}</code>
+                      <button
+                        onClick={() => copy(chavePix, 'pix')}
+                        className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90"
+                        aria-label="Copiar chave"
+                      >
+                        {copiado === 'pix' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {valor && (
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        Ao realizar a transferência, informe o valor de{' '}
+                        <strong className="text-primary">R$ {Number(valor).toFixed(2)}</strong> e a categoria{' '}
+                        <strong className="text-primary capitalize">{tipo}</strong> no campo de mensagem.
+                      </p>
+                    )}
+                    <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm text-foreground">
+                      <strong>Dica:</strong> No campo &quot;mensagem&quot; do PIX, informe se é dízimo, oferta ou missões
+                      para facilitar a identificação.
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col items-center text-center py-10 px-4 rounded-xl bg-muted border border-dashed border-border">
+                  <div className="h-14 w-14 rounded-full bg-accent/15 text-primary flex items-center justify-center mb-3">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <p className="font-semibold text-foreground mb-1">Chave PIX em configuração</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    A tesouraria está finalizando os dados da chave PIX institucional. Em breve
+                    você poderá contribuir diretamente por aqui. Enquanto isso, use a opção
+                    &quot;Presencial&quot; ou fale conosco.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
           {method === 'banco' && (
             <div className="bg-card rounded-2xl border border-border p-6 md:p-8 shadow-sm">
               <h3 className="font-serif font-bold text-xl text-foreground mb-4">Dados Bancários</h3>
-              <div className="space-y-3">
-                {[
-                  ['Titular', banco.titular],
-                  ['CNPJ', banco.cnpj],
-                  ['Banco', banco.nome],
-                  ['Agência', banco.agencia],
-                  ['Conta Corrente', banco.conta],
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between p-3 rounded-md bg-muted border border-border"
-                  >
-                    <div>
-                      <p className="text-xs text-muted-foreground">{label}</p>
-                      <p className="font-medium text-foreground">{value}</p>
-                    </div>
-                    <button
-                      onClick={() => copy(value, label)}
-                      className="p-2 rounded-md hover:bg-card"
-                      aria-label={`Copiar ${label}`}
-                    >
-                      {copiado === label ? (
-                        <Check className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Copy className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </button>
+              {bancoConfigured ? (
+                <p className="text-muted-foreground">Configurando dados bancários...</p>
+              ) : (
+                <div className="flex flex-col items-center text-center py-10 px-4 rounded-xl bg-muted border border-dashed border-border">
+                  <div className="h-14 w-14 rounded-full bg-accent/15 text-primary flex items-center justify-center mb-3">
+                    <Clock className="h-6 w-6" />
                   </div>
-                ))}
-              </div>
+                  <p className="font-semibold text-foreground mb-1">Dados bancários em configuração</p>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    A conta institucional ainda está sendo preparada para divulgação pública. Em
+                    breve disponibilizaremos aqui os dados para transferência.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
