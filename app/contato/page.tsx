@@ -1,11 +1,30 @@
 'use client'
 
 import { useState, FormEvent } from 'react'
-import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2 } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2, Navigation, ExternalLink } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
 import { toast } from 'sonner'
+import {
+  getChurch,
+  formatAddressTwoLines,
+  formatPhone,
+  telHref,
+  mailtoHref,
+  getMapsEmbedUrl,
+  getMapsDirectionsUrl,
+  getMapsSearchUrl,
+} from '@/lib/site-data'
 
 export default function ContatoPage() {
+  const church = getChurch()
+  const { endereco, contato, social } = church
+  const [enderecoLine1, enderecoLine2] = formatAddressTwoLines(endereco)
+  const phoneDisplay = formatPhone(contato.telefone)
+  const phoneLink = telHref(contato.telefone)
+  const emailLink = mailtoHref(contato.email)
+  const mapsEmbedUrl = getMapsEmbedUrl()
+  const mapsDirectionsUrl = getMapsDirectionsUrl()
+  const mapsSearchUrl = getMapsSearchUrl()
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
   const [sending, setSending] = useState(false)
 
@@ -55,38 +74,42 @@ export default function ContatoPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">Endereço</p>
-                    <p className="text-sm text-muted-foreground">Rua Principal, 123 - Centro</p>
-                    <p className="text-sm text-muted-foreground">Capim Grosso - BA, CEP 44570-000</p>
+                    <p className="text-sm text-muted-foreground">{enderecoLine1}</p>
+                    <p className="text-sm text-muted-foreground">{enderecoLine2}</p>
                   </div>
                 </li>
-                <li className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                    <Phone className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Telefone</p>
-                    <a
-                      href="tel:+5574999999999"
-                      className="text-sm text-muted-foreground hover:text-primary transition"
-                    >
-                      (74) 99999-9999
-                    </a>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                    <Mail className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">E-mail</p>
-                    <a
-                      href="mailto:contato@pibcapimgrosso.com.br"
-                      className="text-sm text-muted-foreground hover:text-primary transition"
-                    >
-                      contato@pibcapimgrosso.com.br
-                    </a>
-                  </div>
-                </li>
+                {phoneLink && (
+                  <li className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">Telefone</p>
+                      <a
+                        href={phoneLink}
+                        className="text-sm text-muted-foreground hover:text-primary transition"
+                      >
+                        {phoneDisplay}
+                      </a>
+                    </div>
+                  </li>
+                )}
+                {emailLink && (
+                  <li className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <Mail className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">E-mail</p>
+                      <a
+                        href={emailLink}
+                        className="text-sm text-muted-foreground hover:text-primary transition break-all"
+                      >
+                        {contato.email}
+                      </a>
+                    </div>
+                  </li>
+                )}
                 <li className="flex items-start gap-3">
                   <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
                     <Clock className="h-5 w-5" />
@@ -99,38 +122,112 @@ export default function ContatoPage() {
                 </li>
               </ul>
               <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-sm font-semibold text-foreground mb-3">Siga-nos</p>
-                <div className="flex gap-2">
-                  {[
-                    { icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
-                    { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
-                    { icon: Youtube, href: 'https://youtube.com', label: 'YouTube' },
-                  ].map((s) => (
-                    <a
-                      key={s.label}
-                      href={s.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={s.label}
-                      className="h-10 w-10 rounded-full border border-border hover:border-accent hover:bg-accent/10 flex items-center justify-center text-muted-foreground hover:text-primary transition"
-                    >
-                      <s.icon className="h-4 w-4" />
-                    </a>
-                  ))}
+                <p className="text-sm font-semibold text-foreground mb-3">Siga-nos no Instagram</p>
+                <div className="flex flex-col gap-2">
+                  <a
+                    href={social.instagram}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
+                  >
+                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <Instagram className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">A Igreja</p>
+                      <p className="text-xs text-muted-foreground truncate">@pibaccapimgrosso</p>
+                    </div>
+                  </a>
+                  <a
+                    href={social.instagramPastor}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
+                  >
+                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <Instagram className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Pastor Silas Barreto</p>
+                      <p className="text-xs text-muted-foreground truncate">@prsilasbarreto</p>
+                    </div>
+                  </a>
+                  <a
+                    href={social.instagramJovens}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
+                  >
+                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
+                      <Instagram className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">Rede de Jovens</p>
+                      <p className="text-xs text-muted-foreground truncate">@rdjmbc</p>
+                    </div>
+                  </a>
+                  {(social.facebook || social.youtube) && (
+                    <div className="flex gap-2 pt-2">
+                      {social.facebook && (
+                        <a
+                          href={social.facebook}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="Facebook"
+                          className="h-10 w-10 rounded-full border border-border hover:border-accent hover:bg-accent/10 flex items-center justify-center text-muted-foreground hover:text-primary transition"
+                        >
+                          <Facebook className="h-4 w-4" />
+                        </a>
+                      )}
+                      {social.youtube && (
+                        <a
+                          href={social.youtube}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="YouTube"
+                          className="h-10 w-10 rounded-full border border-border hover:border-accent hover:bg-accent/10 flex items-center justify-center text-muted-foreground hover:text-primary transition"
+                        >
+                          <Youtube className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
             {/* Mapa */}
             <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-              <iframe
-                title="Localização PIBAC"
-                src="https://www.google.com/maps?q=Capim+Grosso,+BA&output=embed"
-                className="w-full aspect-[4/3] border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
+              <div className="relative">
+                <iframe
+                  title={`Localização ${church.nomeCurto} — ${enderecoLine1}`}
+                  src={mapsEmbedUrl}
+                  className="w-full aspect-[4/3] border-0 block"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
+              <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-2 bg-card border-t border-border">
+                <a
+                  href={mapsDirectionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-md font-semibold text-sm hover:bg-primary/90 transition shadow-sm hover:shadow-md hover:shadow-primary/30"
+                >
+                  <Navigation className="h-4 w-4" />
+                  Como chegar
+                </a>
+                <a
+                  href={mapsSearchUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 inline-flex items-center justify-center gap-2 border border-border hover:border-primary hover:bg-primary/5 px-4 py-2.5 rounded-md font-medium text-sm text-foreground transition"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Abrir no Maps
+                </a>
+              </div>
             </div>
           </div>
 
@@ -150,7 +247,7 @@ export default function ContatoPage() {
                     value={form.telefone}
                     onChange={update('telefone')}
                     className={baseInput}
-                    placeholder="(74) 99999-9999"
+                    placeholder="(XX) XXXXX-XXXX"
                   />
                 </div>
               </div>

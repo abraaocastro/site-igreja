@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { ministerios as defaultMinisterios, eventos as defaultEventos, heroBanners as defaultHero } from '@/lib/data'
+import { getChurch, formatAddressOneLine, formatPhone, safeValue } from '@/lib/site-data'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -59,15 +60,18 @@ export default function AdminPage() {
   const [banners, setBanners] = useCMSState('banners', defaultHero)
   const [ministerios, setMinisterios] = useCMSState('ministerios', defaultMinisterios)
   const [eventos, setEventos] = useCMSState('eventos', defaultEventos)
+  // Defaults para textos editáveis. Endereço/telefone/email vêm de data/church.json
+  // (fonte canônica); aqui só ficam como fallback inicial se o conteudísta quiser override.
+  const _church = getChurch()
   const [textos, setTextos] = useCMSState('textos', {
     homeTitulo: 'Bem-vindo à Nossa Igreja',
     homeSubtitulo: 'Somos uma comunidade de fé comprometida em amar a Deus e ao próximo',
     versiculoDestaque:
       'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.',
     versiculoReferencia: 'João 3:16',
-    endereco: 'Rua Principal, 123 - Centro, Capim Grosso - BA',
-    telefone: '(74) 99999-9999',
-    email: 'contato@pibcapimgrosso.com.br',
+    endereco: `${formatAddressOneLine(_church.endereco)}, CEP ${_church.endereco.cep}`,
+    telefone: safeValue(formatPhone(_church.contato.telefone) ?? '', 'A confirmar'),
+    email: safeValue(_church.contato.email, 'A confirmar'),
   })
 
   useEffect(() => {

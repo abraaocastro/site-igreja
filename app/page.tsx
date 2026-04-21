@@ -26,6 +26,7 @@ import {
   eventos as defaultEventos,
   horariosCultos,
 } from '@/lib/data'
+import { getChurch, formatAddressOneLine } from '@/lib/site-data'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -38,6 +39,7 @@ function loadCms<T>(key: string, fallback: T): T {
 }
 
 export default function Home() {
+  const church = getChurch()
   const [heroBanners, setHeroBanners] = useState(defaultHero)
   const [ministerios, setMinisterios] = useState(defaultMinisterios)
   const [eventos, setEventos] = useState(defaultEventos)
@@ -413,11 +415,11 @@ export default function Home() {
                 </p>
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-primary" />
-                    <span className="text-foreground">Rua Principal, 123 - Centro, Capim Grosso - BA</span>
+                    <MapPin className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-foreground">{formatAddressOneLine(church.endereco)}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-primary" />
+                    <Clock className="h-5 w-5 text-primary shrink-0" />
                     <span className="text-foreground">Domingos às 9h e 19h</span>
                   </div>
                 </div>

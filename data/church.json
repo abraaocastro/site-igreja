@@ -1,0 +1,44 @@
+{
+  "nome": "Primeira Igreja Batista de Capim Grosso",
+  "nomeCurto": "PIBAC",
+  "slogan": "Uma comunidade de fé, amor e esperança. Venha fazer parte da nossa família!",
+
+  "endereco": {
+    "rua": "Rua Eldorado",
+    "numero": "30",
+    "bairro": "TODO-bairro",
+    "cidade": "Capim Grosso",
+    "estado": "BA",
+    "cep": "44695-000"
+  },
+
+  "contato": {
+    "telefone": "TODO-telefone",
+    "whatsapp": "TODO-whatsapp",
+    "email": "TODO-email"
+  },
+
+  "social": {
+    "instagram": "https://www.instagram.com/pibaccapimgrosso/",
+    "instagramPastor": "https://www.instagram.com/prsilasbarreto/",
+    "instagramJovens": "https://www.instagram.com/rdjmbc/",
+    "facebook": null,
+    "youtube": null
+  },
+
+  "pastor": {
+    "nome": "Silas Barreto",
+    "titulo": "Pastor Presidente",
+    "bio": "TODO-bio-oficial",
+    "foto": "/pastor-silas.png",
+    "instagram": "https://www.instagram.com/prsilasbarreto/"
+  },
+
+  "aviso": {
+    "ativo": false,
+    "severidade": "info",
+    "mensagem": "",
+    "link": null,
+    "linkTexto": null
+  }
+}

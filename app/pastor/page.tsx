@@ -1,8 +1,9 @@
 import { Metadata } from 'next'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Mail, Phone, BookOpen, Heart, Users, GraduationCap, Quote, Church, ArrowRight } from 'lucide-react'
+import { Mail, Phone, Instagram, BookOpen, Heart, Users, GraduationCap, Quote, Church, ArrowRight } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
+import { getChurch, formatPhone, telHref, mailtoHref } from '@/lib/site-data'
 
 export const metadata: Metadata = {
   title: 'Conheça o Pastor | Primeira Igreja Batista de Capim Grosso',
@@ -24,6 +25,11 @@ const ministerio = [
 ]
 
 export default function PastorPage() {
+  const { pastor, contato } = getChurch()
+  const pastorEmailLink = mailtoHref(contato.email)
+  const pastorPhoneLink = telHref(contato.telefone)
+  const pastorPhoneDisplay = formatPhone(contato.telefone)
+
   return (
     <div>
       {/* Hero */}
@@ -37,23 +43,36 @@ export default function PastorPage() {
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-sm mb-4">
                 <Church className="h-4 w-4 text-accent" />
-                Pastor Presidente
+                {pastor.titulo}
               </div>
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">
-                Pr. Silas
+                Pr. {pastor.nome}
               </h1>
               <p className="text-lg opacity-90 max-w-xl leading-relaxed">
                 Servindo com amor, ensinando com fidelidade e cuidando de cada vida
                 como o Bom Pastor nos ensinou.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href="mailto:pastor@pibcapimgrosso.com.br"
-                  className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-5 py-2.5 rounded-md font-medium hover:bg-accent/90 transition"
-                >
-                  <Mail className="h-4 w-4" />
-                  Enviar e-mail
-                </a>
+                {pastorEmailLink && (
+                  <a
+                    href={pastorEmailLink}
+                    className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-5 py-2.5 rounded-md font-medium hover:bg-accent/90 transition"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Enviar e-mail
+                  </a>
+                )}
+                {pastor.instagram && (
+                  <a
+                    href={pastor.instagram}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-md font-medium transition"
+                  >
+                    <Instagram className="h-4 w-4" />
+                    @prsilasbarreto
+                  </a>
+                )}
                 <Link
                   href="/contato"
                   className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-md font-medium transition"
@@ -68,8 +87,8 @@ export default function PastorPage() {
                 <div className="absolute inset-0 rounded-full bg-accent/30 blur-2xl" />
                 <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-2xl glow-cyan">
                   <Image
-                    src="/pastor-silas.png"
-                    alt="Pastor Silas"
+                    src={pastor.foto}
+                    alt={`${pastor.titulo} ${pastor.nome}`}
                     fill
                     sizes="(min-width: 768px) 22rem, 80vw"
                     className="object-cover"
@@ -78,7 +97,7 @@ export default function PastorPage() {
                 </div>
                 <div className="absolute -bottom-3 -right-3 bg-white text-primary px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-1.5">
                   <span className="h-2 w-2 rounded-full bg-accent animate-pulse-soft" />
-                  Pastor Presidente
+                  {pastor.titulo}
                 </div>
               </div>
             </div>
@@ -94,34 +113,51 @@ export default function PastorPage() {
               <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
                 <div className="relative aspect-square rounded-xl overflow-hidden mb-4">
                   <Image
-                    src="/pastor-silas.png"
-                    alt="Pastor Silas"
+                    src={pastor.foto}
+                    alt={`${pastor.titulo} ${pastor.nome}`}
                     fill
                     sizes="360px"
                     className="object-cover"
                   />
                 </div>
-                <h2 className="text-xl font-serif font-bold text-foreground">Pr. Silas</h2>
-                <p className="text-sm text-primary font-medium">Pastor Presidente</p>
+                <h2 className="text-xl font-serif font-bold text-foreground">Pr. {pastor.nome}</h2>
+                <p className="text-sm text-primary font-medium">{pastor.titulo}</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Pastoreando a PIBAC há vários anos
+                  Pastoreando a PIBAC
                 </p>
-                <div className="mt-5 pt-5 border-t border-border space-y-2">
-                  <a
-                    href="mailto:pastor@pibcapimgrosso.com.br"
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
-                  >
-                    <Mail className="h-4 w-4" />
-                    pastor@pibcapimgrosso.com.br
-                  </a>
-                  <a
-                    href="tel:+5574999999999"
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
-                  >
-                    <Phone className="h-4 w-4" />
-                    (74) 99999-9999
-                  </a>
-                </div>
+                {(pastorEmailLink || pastorPhoneLink || pastor.instagram) && (
+                  <div className="mt-5 pt-5 border-t border-border space-y-2">
+                    {pastorEmailLink && (
+                      <a
+                        href={pastorEmailLink}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition break-all"
+                      >
+                        <Mail className="h-4 w-4 shrink-0" />
+                        {contato.email}
+                      </a>
+                    )}
+                    {pastorPhoneLink && (
+                      <a
+                        href={pastorPhoneLink}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
+                      >
+                        <Phone className="h-4 w-4 shrink-0" />
+                        {pastorPhoneDisplay}
+                      </a>
+                    )}
+                    {pastor.instagram && (
+                      <a
+                        href={pastor.instagram}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
+                      >
+                        <Instagram className="h-4 w-4 shrink-0" />
+                        @prsilasbarreto
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="bg-brand-gradient text-white rounded-2xl p-6 shadow-lg">
@@ -231,7 +267,7 @@ export default function PastorPage() {
               <p className="text-right italic pt-4 border-t border-border">
                 Com amor em Cristo,
                 <br />
-                <strong className="text-foreground not-italic">Pr. Silas</strong>
+                <strong className="text-foreground not-italic">Pr. {pastor.nome}</strong>
               </p>
             </div>
           </div>

@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { AuthProvider } from '@/lib/auth'
 import { Toaster } from '@/components/ui/sonner'
+import { getChurchJsonLd } from '@/lib/site-data'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -46,8 +47,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // JSON-LD Schema.org: ajuda o Google a entender a entidade (igreja + endereço +
+  // pastor + redes sociais) e habilita o "knowledge panel" local.
+  // O siteUrl virá da env em produção; fallback pro domínio esperado.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pibac.vercel.app'
+  const jsonLd = getChurchJsonLd(siteUrl)
+
   return (
     <html lang="pt-BR" className={`${inter.variable} ${merriweather.variable} bg-background`}>
+      <head>
+        <script
+          type="application/ld+json"
+          // JSON.stringify é seguro aqui — o input vem 100% de data/church.json (confiável).
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans antialiased min-h-screen flex flex-col">
         <AuthProvider>
           <Header />
