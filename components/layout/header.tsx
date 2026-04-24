@@ -39,9 +39,15 @@ export function Header() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const { user, logout } = useAuth()
+  const { user, profile, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
+
+  // Nome exibido vem do profile (tabela pública), com fallback pro prefixo
+  // do e-mail caso o profile ainda não tenha carregado.
+  const displayName = profile?.nome || user?.email?.split('@')[0] || ''
+  const displayInitial = (displayName || '?').charAt(0).toUpperCase()
+  const displayRole = profile?.role ?? 'membro'
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -59,8 +65,8 @@ export function Header() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname?.startsWith(href)
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     setUserMenuOpen(false)
     router.push('/')
   }
@@ -171,10 +177,10 @@ export function Header() {
                   aria-label="Menu do usuário"
                 >
                   <div className="h-7 w-7 rounded-full bg-brand-gradient-cyan flex items-center justify-center text-white text-xs font-bold">
-                    {user.name.charAt(0)}
+                    {displayInitial}
                   </div>
                   <span className="text-sm font-medium text-foreground max-w-[120px] truncate">
-                    {user.name.split(' ')[0]}
+                    {displayName.split(' ')[0]}
                   </span>
                   <ChevronDown className={cn('h-4 w-4 transition-transform', userMenuOpen && 'rotate-180')} />
                 </button>
@@ -183,10 +189,10 @@ export function Header() {
                     <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
                     <div className="absolute right-0 top-full mt-2 w-60 rounded-lg bg-card shadow-xl ring-1 ring-border overflow-hidden z-50 animate-fade-in">
                       <div className="px-4 py-3 border-b border-border bg-muted">
-                        <p className="text-sm font-semibold text-foreground">{user.name}</p>
+                        <p className="text-sm font-semibold text-foreground">{displayName}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                         <span className="mt-1 inline-block text-[10px] uppercase tracking-wider font-bold text-primary bg-accent/20 px-2 py-0.5 rounded">
-                          {user.role}
+                          {displayRole}
                         </span>
                       </div>
                       <Link
@@ -288,7 +294,7 @@ export function Header() {
                       className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted rounded-md"
                     >
                       <LayoutDashboard className="h-4 w-4" />
-                      Painel ({user.name})
+                      Painel ({displayName})
                     </Link>
                     <button
                       onClick={handleLogout}

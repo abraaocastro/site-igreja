@@ -1,84 +1,167 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-
-/*
- * ⚠️  AVISO DE SEGURANÇA
+/**
+ * AuthProvider — camada de autenticação baseada em Supabase.
  *
- * Este é um sistema de autenticação 100% client-side, pensado como DEMO.
- * As credenciais viajam dentro do bundle JavaScript e podem ser lidas por
- * qualquer visitante do site via DevTools. NÃO use em produção.
+ * Mantém a mesma API pública do mock anterior (`useAuth()` retornando
+ * `{ user, loading, login, logout }`) pra que componentes existentes
+ * funcionem sem alterações, mas agora atrás do Supabase Auth com sessão
+ * persistida em cookies HTTP-only (segura, SSR-friendly).
  *
- * Para produção, substitua por um provedor real (NextAuth/Auth.js com
- * provider de e-mail/senha, Clerk, Supabase Auth, Firebase Auth, etc.) e
- * persista o conteúdo do CMS em um backend com autorização server-side.
- *
- * As credenciais padrão existem apenas para o primeiro acesso da equipe.
- * TROQUE-AS imediatamente ao ir pra produção, definindo variáveis:
- *   NEXT_PUBLIC_ADMIN_EMAIL
- *   NEXT_PUBLIC_ADMIN_PASSWORD
- * no arquivo `.env.local` (não versionado).
+ * Conceitos importantes:
+ *  - `user` é null até a primeira verificação de sessão terminar
+ *  - `profile` vem da tabela public.profiles (role + nome)
+ *  - `mustChangePassword` vira true se o admin foi criado via script com a
+ *    flag `user_metadata.must_change_password = true` ainda pendente
  */
 
-interface AuthUser {
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
+import type { User, Session } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
+
+export type UserRole = 'admin' | 'conteudista'
+
+export interface AuthProfile {
+  id: string
   email: string
-  name: string
-  role: 'conteudista' | 'admin'
+  nome: string | null
+  role: UserRole
 }
 
-interface AuthContextValue {
-  user: AuthUser | null
+export interface AuthContextValue {
+  user: User | null
+  profile: AuthProfile | null
   loading: boolean
+  mustChangePassword: boolean
   login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>
-  logout: () => void
+  logout: () => Promise<void>
+  /** Força releitura do profile (útil após troca de role ou nome). */
+  refreshProfile: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const STORAGE_KEY = 'pibac-auth'
-
-const DEMO_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'conteudista@pibac.local'
-const DEMO_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'trocar-esta-senha'
-
-const DEMO_USERS: Array<{ email: string; password: string; name: string; role: AuthUser['role'] }> = [
-  { email: DEMO_EMAIL, password: DEMO_PASSWORD, name: 'Equipe de Conteúdo', role: 'conteudista' },
-]
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
+  // Uma única instância do cliente por provider (memoized via useState init).
+  // Pode ser null se envs Supabase não estiverem configuradas (ex: build
+  // estático sem .env.local). Nesse caso tudo fica em "deslogado".
+  const [supabase] = useState(() => createClient())
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<AuthProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const mustChangePassword = Boolean(user?.user_metadata?.must_change_password)
+
+  const fetchProfile = useCallback(
+    async (userId: string): Promise<AuthProfile | null> => {
+      if (!supabase) return null
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email, nome, role')
+        .eq('id', userId)
+        .maybeSingle()
+      if (error) {
+        // Profile pode ainda não existir se a trigger de auto-create demorar.
+        // Fallback: derivar do auth.user.
+        return null
+      }
+      return data as AuthProfile | null
+    },
+    [supabase]
+  )
+
+  const hydrate = useCallback(
+    async (session: Session | null) => {
+      if (!session?.user) {
+        setUser(null)
+        setProfile(null)
+        return
+      }
+      setUser(session.user)
+      const p = await fetchProfile(session.user.id)
+      setProfile(p)
+    },
+    [fetchProfile]
+  )
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setUser(JSON.parse(raw))
-    } catch {}
-    setLoading(false)
-  }, [])
+    let active = true
 
-  const login = async (email: string, password: string) => {
-    await new Promise((r) => setTimeout(r, 600))
-    const found = DEMO_USERS.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
-    )
-    if (!found) return { ok: false, error: 'E-mail ou senha inválidos.' }
-    const next: AuthUser = { email: found.email, name: found.name, role: found.role }
-    setUser(next)
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-    } catch {}
-    return { ok: true }
-  }
+    if (!supabase) {
+      // Sem cliente (envs ausentes) → terminamos loading com user=null.
+      setLoading(false)
+      return
+    }
 
-  const logout = () => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!active) return
+      hydrate(session).finally(() => {
+        if (active) setLoading(false)
+      })
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return
+      hydrate(session)
+    })
+
+    return () => {
+      active = false
+      subscription.unsubscribe()
+    }
+  }, [supabase, hydrate])
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      if (!supabase) {
+        return {
+          ok: false,
+          error:
+            'Configuração do servidor incompleta. Avise a equipe técnica (envs do Supabase ausentes).',
+        }
+      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+      if (error) {
+        // Mensagens traduzidas. Supabase retorna 'Invalid login credentials' etc.
+        const msg =
+          error.message === 'Invalid login credentials'
+            ? 'E-mail ou senha inválidos.'
+            : error.message === 'Email not confirmed'
+              ? 'Confirme seu e-mail antes de entrar.'
+              : error.message
+        return { ok: false, error: msg }
+      }
+      if (data.session) {
+        await hydrate(data.session)
+      }
+      return { ok: true }
+    },
+    [supabase, hydrate]
+  )
+
+  const logout = useCallback(async () => {
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
     setUser(null)
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-    } catch {}
-  }
+    setProfile(null)
+  }, [supabase])
+
+  const refreshProfile = useCallback(async () => {
+    if (!user) return
+    const p = await fetchProfile(user.id)
+    setProfile(p)
+  }, [user, fetchProfile])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user, profile, loading, mustChangePassword, login, logout, refreshProfile }}
+    >
       {children}
     </AuthContext.Provider>
   )

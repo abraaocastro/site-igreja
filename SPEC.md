@@ -1,8 +1,8 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.0 (2026-04-20)
-**Status:** Em execução — Phase 1 em andamento
-**Substitui:** v1.3 de 21/04/2026
+**Versão:** 2.1 (2026-04-23)
+**Status:** Em execução — Phase 3 (auth Supabase) implementada, bootstrap pendente no lado do usuário
+**Substitui:** v2.0 de 20/04/2026
 
 ---
 
@@ -212,19 +212,88 @@ Objetivo: visitante abre rotas do celular em 1 toque.
 
 ---
 
-### Phase 3 — Aviso global
+### Phase 3 — Auth real com Supabase **(P0, implementada)**
+Objetivo: substituir o mock `NEXT_PUBLIC_ADMIN_*` por auth real com sessão
+em cookies HTTP-only, RLS, role-based access e **forçar troca de senha no
+primeiro login**. Mantém a API pública do `useAuth()` intacta.
+
+**Decisões**
+- E-mail/senha (sem Google OAuth nesta fase — decidido pelo stakeholder)
+- 1 admin bootstrapado via script (`dammabelmont@gmail.com`); admin
+  convida conteudistas via API route (Phase 3.5 futura)
+- Primeiro login força `/admin/primeiro-acesso` com medidor de força
+  (`zxcvbn-ts` em PT-BR) + gerador EFF-style de passphrase
+- TDD: Vitest + React Testing Library + jsdom
+
+**Tasks**
+- 3.1. Instalar deps: `@supabase/ssr`, `@supabase/supabase-js`,
+  `@zxcvbn-ts/{core,language-common,language-pt-br}`, `vitest`, `@vitejs/plugin-react`,
+  `@testing-library/{react,jest-dom,user-event}`, `jsdom`, `tsx`, `dotenv`
+- 3.2. Migration SQL `supabase/migrations/001_profiles_and_roles.sql`:
+  - Enum `user_role` (admin/conteudista)
+  - Tabela `profiles` (FK → `auth.users`, email, nome, role)
+  - Trigger `handle_new_user` — autocria profile no signup
+  - Trigger `handle_updated_at`
+  - RLS: self-read, self-update, admin-read-all, admin-update-all
+- 3.3. Clientes Supabase em `lib/supabase/{client,server,admin}.ts`
+  - Browser: `createBrowserClient` via `@supabase/ssr`
+  - Server: `createServerClient` com cookies de `next/headers`
+  - Admin: `service_role` — nunca `NEXT_PUBLIC_`
+- 3.4. Reescrever `lib/auth.tsx` mantendo API pública do `useAuth()`:
+  - Supabase Auth por baixo, profile lido de `public.profiles`
+  - Expõe `mustChangePassword` derivado de `user_metadata`
+  - Degrada graciosamente se envs ausentes (build passa sem `.env.local`)
+- 3.5. `middleware.ts` (defense in depth):
+  - `/admin/*` sem sessão → `/login?next=<path>`
+  - `must_change_password: true` → força `/admin/primeiro-acesso`
+  - Mantém cookies de sessão renovados
+- 3.6. `lib/password-strength.ts`:
+  - `evaluatePassword()` — score 0-4 + checklist + crack time em PT-BR
+  - `generatePassphrase()` — EFF-style, sempre score ≥ 3, formato
+    `palavra-Palavra-##-palavra-palavra#`
+  - Dicionário PT-BR + 10 palavras do contexto PIBAC (pibac, igreja, etc)
+- 3.7. `components/password-strength.tsx` — medidor visual + checklist
+  ao vivo + botão "Gerar senha pra mim" + caixa educativa
+- 3.8. `/admin/primeiro-acesso` — form de troca forçada da senha,
+  usando o componente acima + `supabase.auth.updateUser`
+- 3.9. `scripts/bootstrap-admin.ts` — CLI idempotente que usa
+  `service_role` pra criar admin com `must_change_password: true`
+- 3.10. TDD — `__tests__/lib/password-strength.test.ts`,
+  `__tests__/lib/auth.test.tsx`, `__tests__/components/password-strength.test.tsx`
+- 3.11. Remover `DEMO_USERS`, atualizar consumidores (`header.tsx`,
+  `admin/page.tsx`) pra shape novo (`profile?.nome` em vez de `user.name`)
+
+**Acceptance**
+- [x] `npx tsc --noEmit` passa
+- [x] `npm test` passa (32/32 atualmente)
+- [x] `npm run build` passa (inclui prerender das 16 rotas)
+- [x] Middleware bloqueia `/admin` sem sessão → `/login?next=/admin`
+- [x] Cobertura TDD das regras de senha (checklist, acceptable, gerador)
+- [ ] Usuário roda SQL migration no dashboard Supabase ← manual
+- [ ] Usuário preenche `.env.local` com service_role ← manual
+- [ ] Usuário roda `npm run bootstrap:admin` ← manual
+- [ ] Primeiro login redireciona pra `/admin/primeiro-acesso` e força troca
+
+**Fora de escopo desta fase**
+- Admin criar conteudistas via UI (Phase 3.5 futura)
+- Recuperação de senha por e-mail (Phase 3.6 futura)
+- Upload de foto de perfil
+
+---
+
+### Phase 4 — Aviso global (era Phase 3 em v2.0)
 Objetivo: admin ativa banner no topo de todas as páginas em < 1 minuto.
 
 **Tasks**
-- 3.1. Estender `church.json` com `aviso: { ativo, severidade, mensagem, link, linkTexto }`
-- 3.2. Componente `<AvisoBanner/>` que renderiza apenas se `aviso.ativo === true`
-- 3.3. Severidades com tokens do design system:
+- 4.1. Estender `church.json` com `aviso: { ativo, severidade, mensagem, link, linkTexto }`
+- 4.2. Componente `<AvisoBanner/>` que renderiza apenas se `aviso.ativo === true`
+- 4.3. Severidades com tokens do design system:
   - `info` → fundo `bg-accent/10`, ícone azul
   - `atencao` → fundo `bg-yellow-50` + borda `border-yellow-300`
   - `urgente` → fundo `bg-destructive/10` + borda `border-destructive`
-- 3.4. Botão X pra dispensar → persistir em `sessionStorage` (não reaparece na sessão, volta se abrir nova)
-- 3.5. Injetar em `app/layout.tsx` acima do `<Header/>`
-- 3.6. Aba "Avisos" no `/admin` com toggle + preview
+- 4.4. Botão X pra dispensar → persistir em `sessionStorage` (não reaparece na sessão, volta se abrir nova)
+- 4.5. Injetar em `app/layout.tsx` acima do `<Header/>`
+- 4.6. Aba "Avisos" no `/admin` com toggle + preview
 
 **Acceptance**
 - [ ] Setar `aviso.ativo = true` em `church.json` → banner aparece em TODAS as páginas após deploy
@@ -234,17 +303,17 @@ Objetivo: admin ativa banner no topo de todas as páginas em < 1 minuto.
 
 ---
 
-### Phase 4 — Programação consolidada
+### Phase 5 — Programação consolidada (era Phase 4 em v2.0)
 Objetivo: eventos recorrentes vivem em um lugar, aparecem corretamente no calendário e lista.
 
 **Tasks**
-- 4.1. Criar `data/events.json` com `recorrentes` + `especiais`
-- 4.2. Helper `getEventsForMonth(year, month)` que expande recorrentes pra cada semana
-- 4.3. Refatorar `app/calendario/page.tsx` pra usar helper (ler do JSON, localStorage apenas como override)
-- 4.4. Refatorar `app/eventos/page.tsx` idem
-- 4.5. Criar `data/ministries.json` com estrutura sugerida
-- 4.6. Migrar `lib/data.ts` → JSONs, deprecar constants antigas
-- 4.7. Atualizar `/admin` pra ler/editar `ministries.json` e `events.json`
+- 5.1. Criar `data/events.json` com `recorrentes` + `especiais`
+- 5.2. Helper `getEventsForMonth(year, month)` que expande recorrentes pra cada semana
+- 5.3. Refatorar `app/calendario/page.tsx` pra usar helper (ler do JSON, localStorage apenas como override)
+- 5.4. Refatorar `app/eventos/page.tsx` idem
+- 5.5. Criar `data/ministries.json` com estrutura sugerida
+- 5.6. Migrar `lib/data.ts` → JSONs, deprecar constants antigas
+- 5.7. Atualizar `/admin` pra ler/editar `ministries.json` e `events.json`
 
 **Acceptance**
 - [ ] EBD de domingo aparece em todos os domingos do calendário
@@ -254,15 +323,15 @@ Objetivo: eventos recorrentes vivem em um lugar, aparecem corretamente no calend
 
 ---
 
-### Phase 5 — Admin UI expandido
+### Phase 6 — Admin UI expandido (era Phase 5)
 Objetivo: leigo edita tudo sem mexer no git.
 
 **Tasks**
-- 5.1. Aba "Igreja" no `/admin` com formulários pra endereço, contato, socials
-- 5.2. Aba "Pastor" com nome, bio, foto (upload → base64 preview)
-- 5.3. Export JSON pra download (admin baixa o church.json editado, envia pra dev commitar)
-- 5.4. Import JSON pra restaurar
-- 5.5. Diff visual "Current vs Local override" pra deixar claro o que mudou
+- 6.1. Aba "Igreja" no `/admin` com formulários pra endereço, contato, socials
+- 6.2. Aba "Pastor" com nome, bio, foto (upload → base64 preview)
+- 6.3. Export JSON pra download (admin baixa o church.json editado, envia pra dev commitar)
+- 6.4. Import JSON pra restaurar
+- 6.5. Diff visual "Current vs Local override" pra deixar claro o que mudou
 
 **Acceptance**
 - [ ] Admin edita endereço, baixa `church.json`, commitamos, deploy mostra mudança
@@ -271,16 +340,16 @@ Objetivo: leigo edita tudo sem mexer no git.
 
 ---
 
-### Phase 6 — SEO local
+### Phase 7 — SEO local (era Phase 6)
 Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 **Tasks**
-- 6.1. `metadata` completo em cada `page.tsx` (title, description, OG, Twitter)
-- 6.2. JSON-LD `Church` no `app/layout.tsx` usando dados de `church.json`
-- 6.3. `app/sitemap.ts` dinâmico
-- 6.4. `app/robots.ts`
-- 6.5. Auditoria Lighthouse + correções de acessibilidade (alt text, contraste, labels)
-- 6.6. Submeter sitemap ao Google Search Console
+- 7.1. `metadata` completo em cada `page.tsx` (title, description, OG, Twitter)
+- 7.2. JSON-LD `Church` no `app/layout.tsx` usando dados de `church.json`
+- 7.3. `app/sitemap.ts` dinâmico
+- 7.4. `app/robots.ts`
+- 7.5. Auditoria Lighthouse + correções de acessibilidade (alt text, contraste, labels)
+- 7.6. Submeter sitemap ao Google Search Console
 
 **Acceptance**
 - [ ] Lighthouse Performance ≥ 90
@@ -291,11 +360,13 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 ---
 
-### Phase 7 — Backend real (futuro, fora do escopo imediato)
-- Supabase ou Firebase pra persistir o conteúdo editado no admin
-- Auth real (Clerk, NextAuth, Supabase Auth)
-- Upload de imagens pra storage (Cloudinary / Uploadthing / Supabase Storage)
-- Webhook pra revalidar páginas no Vercel
+### Phase 8 — Backend de conteúdo (futuro)
+> Auth já foi resolvido na Phase 3. Esta fase cobre apenas o CMS.
+
+- Migrar `localStorage` de `/admin` pra tabelas Supabase (`banners`, `eventos`, `ministerios`, `textos`)
+- Upload de imagens pra Supabase Storage (bucket `public-images`)
+- Server actions + revalidate on publish
+- API route `/api/admin/invite-conteudista` pra admin criar conteudistas
 
 ---
 
@@ -324,11 +395,12 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 ## 8. Status atual
 
-- [x] Spec v2.0 escrito
+- [x] Spec v2.1 escrito
 - [x] **Phase 1 — Foundation** (concluída)
 - [x] **Phase 2 — Geolocalização** (concluída)
-- [ ] **Phase 3 — Avisos banner** — próxima
-- [ ] Phase 4, 5, 6, 7 — aguardando
+- [x] **Phase 3 — Auth Supabase** (código completo; pendente só o bootstrap manual do usuário — SQL migration + envs + `npm run bootstrap:admin`)
+- [ ] **Phase 4 — Avisos banner** — próxima
+- [ ] Phase 5, 6, 7, 8 — aguardando
 
 ---
 
@@ -336,5 +408,6 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-23 | 2.1 | Phase 3 reescrita: era "Avisos banner", virou "Auth Supabase com first-login forçado". Fases seguintes renumeradas. Adicionado `Phase 8` pra CMS server-side. |
 | 2026-04-20 | 2.0 | Reescrita com análise de estado atual, fases sequenciais, gaps da v1.3 resolvidos |
 | 2026-04-21 | 1.3 | Spec original do usuário — identidade, controle, geolocalização |

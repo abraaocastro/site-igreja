@@ -53,7 +53,7 @@ function useCMSState<T>(key: string, initial: T) {
 }
 
 export default function AdminPage() {
-  const { user, logout, loading } = useAuth()
+  const { user, profile, logout, loading } = useAuth()
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('overview')
 
@@ -86,8 +86,8 @@ export default function AdminPage() {
     )
   }
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     router.push('/')
   }
 
@@ -119,7 +119,7 @@ export default function AdminPage() {
             <div>
               <p className="text-xs uppercase tracking-wider opacity-70 mb-1">Painel de Conteúdo</p>
               <h1 className="text-2xl md:text-3xl font-serif font-bold">
-                Olá, {user.name.split(' ')[0]} 👋
+                Olá, {(profile?.nome || user.email?.split('@')[0] || 'admin').split(' ')[0]} 👋
               </h1>
               <p className="opacity-80 mt-1 text-sm">
                 Gerencie imagens, textos e datas do site PIBAC.
