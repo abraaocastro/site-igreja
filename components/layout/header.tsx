@@ -3,21 +3,24 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { Menu, X, ChevronDown, LogIn, User, LayoutDashboard, LogOut } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import {
+  Menu, X, ChevronDown, LogIn, LayoutDashboard, LogOut,
+  Search,
+} from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { cn } from '@/lib/utils'
 
 const navigation = [
   { name: 'Início', href: '/' },
   {
-    name: 'Sobre Nós',
+    name: 'Sobre',
     href: '#',
     children: [
-      { name: 'Quem Somos', href: '/quem-somos' },
-      { name: 'Nossa História', href: '/historia' },
-      { name: 'Nossa Visão', href: '/visao' },
-      { name: 'Conheça o Pastor', href: '/pastor' },
+      { name: 'Quem Somos', href: '/quem-somos', desc: 'Nossa identidade e valores' },
+      { name: 'Nossa História', href: '/historia', desc: 'Linha do tempo da PIBAC' },
+      { name: 'Nossa Visão', href: '/visao', desc: 'Missão, visão e propósito' },
+      { name: 'Conheça o Pastor', href: '/pastor', desc: 'Pr. Silas Barreto' },
     ],
   },
   { name: 'Ministérios', href: '/ministerios' },
@@ -25,20 +28,21 @@ const navigation = [
     name: 'Programação',
     href: '#',
     children: [
-      { name: 'Eventos', href: '/eventos' },
-      { name: 'Calendário', href: '/calendario' },
+      { name: 'Eventos', href: '/eventos', desc: 'Próximos encontros' },
+      { name: 'Calendário', href: '/calendario', desc: 'Calendário interativo' },
+      { name: 'Plano de Leitura', href: '/plano-leitura', desc: '30 dias na Palavra' },
     ],
   },
-  { name: 'Plano de Leitura', href: '/plano-leitura' },
   { name: 'Contribua', href: '/contribua' },
   { name: 'Contato', href: '/contato' },
 ]
 
 export function Header() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [openDrop, setOpenDrop] = useState<string | null>(null)
+  const [userOpen, setUserOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
   const { user, profile, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
@@ -57,216 +61,106 @@ export function Header() {
   }, [])
 
   useEffect(() => {
-    setMobileMenuOpen(false)
-    setOpenDropdown(null)
-    setUserMenuOpen(false)
+    setMobileOpen(false); setOpenDrop(null); setUserOpen(false); setCmdOpen(false)
   }, [pathname])
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname?.startsWith(href)
+  // atalho ⌘K / Ctrl+K abre busca
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault(); setCmdOpen((v) => !v)
+      }
+      if (e.key === 'Escape') setCmdOpen(false)
+    }
+    window.addEventListener('keydown', h)
+    return () => window.removeEventListener('keydown', h)
+  }, [])
+
+  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname?.startsWith(href))
 
   const handleLogout = async () => {
     await logout()
-    setUserMenuOpen(false)
+    setUserOpen(false)
     router.push('/')
   }
 
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-50 transition-all duration-300 border-b',
-        scrolled
-          ? 'bg-card/95 backdrop-blur-md shadow-md border-border'
-          : 'bg-card border-transparent'
-      )}
-    >
-      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
-        <div className="flex h-20 md:h-24 items-center justify-between gap-4 py-2">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative h-16 w-16 md:h-20 md:w-20 shrink-0">
-              <Image
-                src="/logo.png"
-                alt="Primeira Igreja Batista de Capim Grosso"
-                fill
-                sizes="(min-width: 768px) 80px, 64px"
-                className="object-contain transition-transform duration-300 group-hover:scale-105"
-                priority
-              />
-            </div>
-            <div className="hidden sm:block leading-tight">
-              <p className="text-sm md:text-base font-bold text-primary">Primeira Igreja Batista</p>
-              <p className="text-xs text-muted-foreground tracking-wide uppercase">Capim Grosso</p>
-            </div>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden xl:flex xl:items-center xl:gap-1">
-            {navigation.map((item) => (
-              <div key={item.name} className="relative">
-                {item.children ? (
-                  <div
-                    className="relative"
-                    onMouseEnter={() => setOpenDropdown(item.name)}
-                    onMouseLeave={() => setOpenDropdown(null)}
-                  >
-                    <button
-                      className={cn(
-                        'flex items-center gap-1 px-3 py-2 text-sm font-medium transition-colors rounded-md',
-                        item.children.some((c) => isActive(c.href))
-                          ? 'text-primary bg-accent/10'
-                          : 'text-foreground hover:text-primary hover:bg-muted'
-                      )}
-                    >
-                      {item.name}
-                      <ChevronDown
-                        className={cn(
-                          'h-4 w-4 transition-transform',
-                          openDropdown === item.name && 'rotate-180'
-                        )}
-                      />
-                    </button>
-                    {openDropdown === item.name && (
-                      <div className="absolute left-0 top-full pt-2 w-52 z-50 animate-fade-in">
-                        <div className="rounded-lg bg-card shadow-xl ring-1 ring-border py-2 overflow-hidden">
-                          {item.children.map((child) => (
-                            <Link
-                              key={child.name}
-                              href={child.href}
-                              className={cn(
-                                'block px-4 py-2.5 text-sm transition-colors border-l-2 border-transparent',
-                                isActive(child.href)
-                                  ? 'text-primary bg-accent/10 border-accent'
-                                  : 'text-foreground hover:bg-muted hover:text-primary hover:border-accent'
-                              )}
-                            >
-                              {child.name}
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className={cn(
-                      'relative px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                      isActive(item.href)
-                        ? 'text-primary bg-accent/10'
-                        : 'text-foreground hover:text-primary hover:bg-muted'
-                    )}
-                  >
-                    {item.name}
-                    {isActive(item.href) && (
-                      <span className="absolute left-3 right-3 bottom-1 h-0.5 bg-accent rounded-full" />
-                    )}
-                  </Link>
-                )}
+    <>
+      <header
+        className={cn(
+          'sticky top-0 z-50 transition-[background,box-shadow,border-color] duration-300',
+          scrolled
+            ? 'bg-background/80 backdrop-blur-xl border-b border-border'
+            : 'bg-background border-b border-transparent'
+        )}
+      >
+        <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
+          <div className="flex h-16 md:h-20 items-center justify-between gap-4">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group shrink-0">
+              <div className="relative h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary grid place-items-center overflow-hidden">
+                <Image
+                  src="/logo.png"
+                  alt="PIBAC"
+                  fill
+                  sizes="48px"
+                  className="object-contain p-1.5"
+                  priority
+                />
               </div>
-            ))}
-          </div>
-
-          {/* Right side: auth */}
-          <div className="flex items-center gap-2">
-            {user ? (
-              <div className="relative hidden md:block">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border border-border hover:border-accent hover:bg-muted transition-colors"
-                  aria-label="Menu do usuário"
-                >
-                  <div className="h-7 w-7 rounded-full bg-brand-gradient-cyan flex items-center justify-center text-white text-xs font-bold">
-                    {displayInitial}
-                  </div>
-                  <span className="text-sm font-medium text-foreground max-w-[120px] truncate">
-                    {displayName.split(' ')[0]}
-                  </span>
-                  <ChevronDown className={cn('h-4 w-4 transition-transform', userMenuOpen && 'rotate-180')} />
-                </button>
-                {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 top-full mt-2 w-60 rounded-lg bg-card shadow-xl ring-1 ring-border overflow-hidden z-50 animate-fade-in">
-                      <div className="px-4 py-3 border-b border-border bg-muted">
-                        <p className="text-sm font-semibold text-foreground">{displayName}</p>
-                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                        <span className="mt-1 inline-block text-[10px] uppercase tracking-wider font-bold text-primary bg-accent/20 px-2 py-0.5 rounded">
-                          {displayRole}
-                        </span>
-                      </div>
-                      <Link
-                        href="/admin"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-muted hover:text-primary"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Painel de Conteúdo
-                      </Link>
-                      <button
-                        onClick={handleLogout}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sair
-                      </button>
-                    </div>
-                  </>
-                )}
+              <div className="hidden sm:block leading-tight">
+                <p className="text-[15px] font-semibold text-foreground">PIB Capim Grosso</p>
+                <p className="text-[11px] text-muted-foreground tracking-wider uppercase">Desde 1978 · Bahia</p>
               </div>
-            ) : (
-              <Link
-                href="/login"
-                className="hidden md:inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md text-sm font-medium hover:bg-primary/90 transition-all hover:shadow-md hover:shadow-primary/30"
-              >
-                <LogIn className="h-4 w-4" />
-                Entrar
-              </Link>
-            )}
+            </Link>
 
-            {/* Mobile menu button */}
-            <button
-              type="button"
-              className="xl:hidden inline-flex items-center justify-center rounded-md p-2.5 text-foreground hover:bg-muted"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        {mobileMenuOpen && (
-          <div className="xl:hidden py-3 border-t border-border animate-fade-in">
-            <div className="flex flex-col gap-1 max-h-[70vh] overflow-y-auto">
+            {/* Desktop nav */}
+            <div className="hidden xl:flex xl:items-center xl:gap-1">
               {navigation.map((item) => (
-                <div key={item.name}>
+                <div key={item.name} className="relative">
                   {item.children ? (
-                    <div>
+                    <div
+                      onMouseEnter={() => setOpenDrop(item.name)}
+                      onMouseLeave={() => setOpenDrop(null)}
+                    >
                       <button
-                        className="flex w-full items-center justify-between px-3 py-3 text-base font-medium text-foreground hover:bg-muted rounded-md"
-                        onClick={() => setOpenDropdown(openDropdown === item.name ? null : item.name)}
+                        className={cn(
+                          'flex items-center gap-1 px-3 h-9 text-sm font-medium rounded-full transition-colors',
+                          item.children.some((c) => isActive(c.href))
+                            ? 'text-foreground bg-surface-2'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-surface-2'
+                        )}
                       >
                         {item.name}
                         <ChevronDown
-                          className={cn(
-                            'h-5 w-5 transition-transform',
-                            openDropdown === item.name && 'rotate-180'
-                          )}
+                          className={cn('h-3.5 w-3.5 transition-transform',
+                            openDrop === item.name && 'rotate-180')}
                         />
                       </button>
-                      {openDropdown === item.name && (
-                        <div className="pl-4 border-l-2 border-accent/40 ml-3 mt-1">
-                          {item.children.map((child) => (
-                            <Link
-                              key={child.name}
-                              href={child.href}
-                              className="block px-3 py-2 text-sm text-muted-foreground hover:text-primary"
-                            >
-                              {child.name}
-                            </Link>
-                          ))}
+                      {openDrop === item.name && (
+                        <div className="absolute left-1/2 -translate-x-1/2 top-full pt-3 w-80 z-50 animate-fade-in">
+                          <div className="rounded-2xl bg-card shadow-xl ring-1 ring-border p-2 overflow-hidden">
+                            {item.children.map((child) => (
+                              <Link
+                                key={child.name}
+                                href={child.href}
+                                className={cn(
+                                  'flex items-start gap-3 px-3 py-2.5 rounded-xl transition-colors',
+                                  isActive(child.href)
+                                    ? 'bg-surface-2'
+                                    : 'hover:bg-surface-2'
+                                )}
+                              >
+                                <div className="mt-1 h-1.5 w-1.5 rounded-full bg-accent shrink-0" />
+                                <div>
+                                  <div className="text-sm font-medium text-foreground">{child.name}</div>
+                                  {child.desc && (
+                                    <div className="text-xs text-muted-foreground mt-0.5">{child.desc}</div>
+                                  )}
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -274,10 +168,10 @@ export function Header() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'block px-3 py-3 text-base font-medium rounded-md transition-colors',
+                        'relative px-3 h-9 inline-flex items-center text-sm font-medium rounded-full transition-colors',
                         isActive(item.href)
-                          ? 'bg-accent/10 text-primary'
-                          : 'text-foreground hover:bg-muted'
+                          ? 'text-foreground bg-surface-2'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-surface-2'
                       )}
                     >
                       {item.name}
@@ -285,39 +179,225 @@ export function Header() {
                   )}
                 </div>
               ))}
+            </div>
 
-              <div className="mt-3 pt-3 border-t border-border">
-                {user ? (
-                  <div className="space-y-1">
-                    <Link
-                      href="/admin"
-                      className="flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-muted rounded-md"
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Painel ({displayName})
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-2 px-3 py-2.5 text-sm text-destructive hover:bg-destructive/5 rounded-md"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sair
-                    </button>
-                  </div>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-md text-base font-medium hover:bg-primary/90"
+            {/* Right side */}
+            <div className="flex items-center gap-2">
+              {/* Search trigger */}
+              <button
+                onClick={() => setCmdOpen(true)}
+                className="hidden md:inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground text-sm transition-colors"
+                aria-label="Buscar no site"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Buscar</span>
+                <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 h-5 text-[10px] font-mono text-muted-foreground">
+                  ⌘K
+                </kbd>
+              </button>
+
+              {user ? (
+                <div className="relative hidden md:block">
+                  <button
+                    onClick={() => setUserOpen((v) => !v)}
+                    className="flex items-center gap-2 pl-1 pr-3 h-9 rounded-full border border-border hover:bg-surface-2 transition-colors"
                   >
-                    <LogIn className="h-4 w-4" />
-                    Entrar
-                  </Link>
-                )}
-              </div>
+                    <div className="h-7 w-7 rounded-full bg-brand-gradient-cyan flex items-center justify-center text-white text-xs font-bold">
+                      {displayInitial}
+                    </div>
+                    <span className="text-sm font-medium max-w-[120px] truncate">
+                      {displayName.split(' ')[0]}
+                    </span>
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', userOpen && 'rotate-180')} />
+                  </button>
+                  {userOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setUserOpen(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-card shadow-xl ring-1 ring-border overflow-hidden z-50 animate-fade-in">
+                        <div className="px-4 py-3 border-b border-border">
+                          <p className="text-sm font-semibold">{displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                          <span className="mt-1 inline-block text-[10px] uppercase tracking-wider font-bold text-primary bg-accent/20 px-2 py-0.5 rounded">
+                            {displayRole}
+                          </span>
+                        </div>
+                        <Link href="/admin" className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-surface-2">
+                          <LayoutDashboard className="h-4 w-4" />
+                          Painel de Conteúdo
+                        </Link>
+                        <button onClick={handleLogout}
+                          className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/5">
+                          <LogOut className="h-4 w-4" /> Sair
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <Link href="/login" className="hidden md:inline-flex btn-ghost h-9 text-sm">
+                  <LogIn className="h-4 w-4" /> Entrar
+                </Link>
+              )}
+
+              <Link
+                href="/contato"
+                className="hidden md:inline-flex btn-primary h-9 text-sm"
+              >
+                Visite-nos
+              </Link>
+
+              {/* Mobile button */}
+              <button
+                className="xl:hidden p-2 rounded-full hover:bg-surface-2"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </button>
             </div>
           </div>
-        )}
-      </nav>
-    </header>
+
+          {/* Mobile nav */}
+          {mobileOpen && (
+            <div className="xl:hidden pb-4 border-t border-border animate-fade-in">
+              <button
+                onClick={() => { setMobileOpen(false); setCmdOpen(true) }}
+                className="mt-4 w-full flex items-center gap-2 px-4 h-11 rounded-full border border-border text-muted-foreground"
+              >
+                <Search className="h-4 w-4" /> Buscar no site…
+              </button>
+              <div className="flex flex-col gap-1 mt-3 max-h-[70vh] overflow-y-auto">
+                {navigation.map((item) => (
+                  <div key={item.name}>
+                    {item.children ? (
+                      <>
+                        <button
+                          className="flex w-full items-center justify-between px-3 py-3 text-base font-medium rounded-xl hover:bg-surface-2"
+                          onClick={() => setOpenDrop(openDrop === item.name ? null : item.name)}
+                        >
+                          {item.name}
+                          <ChevronDown className={cn('h-5 w-5 transition-transform', openDrop === item.name && 'rotate-180')} />
+                        </button>
+                        {openDrop === item.name && (
+                          <div className="pl-4 ml-3 mt-1 border-l border-border">
+                            {item.children.map((c) => (
+                              <Link key={c.name} href={c.href}
+                                className="block px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+                                {c.name}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <Link href={item.href}
+                        className={cn('block px-3 py-3 text-base font-medium rounded-xl',
+                          isActive(item.href) ? 'bg-surface-2' : 'hover:bg-surface-2')}>
+                        {item.name}
+                      </Link>
+                    )}
+                  </div>
+                ))}
+                <div className="mt-3 pt-3 border-t border-border flex gap-2">
+                  {user ? (
+                    <>
+                      <Link href="/admin" className="flex-1 btn-ghost justify-center">
+                        <LayoutDashboard className="h-4 w-4" /> Painel
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="flex-1 btn-ghost justify-center text-destructive border-destructive/30 hover:bg-destructive/5"
+                      >
+                        <LogOut className="h-4 w-4" /> Sair
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/login" className="flex-1 btn-ghost justify-center">
+                        <LogIn className="h-4 w-4" /> Entrar
+                      </Link>
+                      <Link href="/contato" className="flex-1 btn-primary justify-center">Visite-nos</Link>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </nav>
+      </header>
+
+      {/* Command palette */}
+      {cmdOpen && <CommandPalette onClose={() => setCmdOpen(false)} />}
+    </>
+  )
+}
+
+// ── Lightweight command palette / search
+function CommandPalette({ onClose }: { onClose: () => void }) {
+  const [q, setQ] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  const items = [
+    { group: 'Navegar', title: 'Início', href: '/' },
+    { group: 'Navegar', title: 'Quem Somos', href: '/quem-somos' },
+    { group: 'Navegar', title: 'Ministérios', href: '/ministerios' },
+    { group: 'Navegar', title: 'Eventos', href: '/eventos' },
+    { group: 'Navegar', title: 'Calendário', href: '/calendario' },
+    { group: 'Navegar', title: 'Pastor Silas', href: '/pastor' },
+    { group: 'Ações', title: 'Plano de Leitura', href: '/plano-leitura' },
+    { group: 'Ações', title: 'Contribuir / Pix', href: '/contribua' },
+    { group: 'Ações', title: 'Falar conosco', href: '/contato' },
+  ]
+  const filtered = q
+    ? items.filter((i) => i.title.toLowerCase().includes(q.toLowerCase()))
+    : items
+  const grouped = filtered.reduce<Record<string, typeof items>>((acc, it) => {
+    (acc[it.group] ||= []).push(it); return acc
+  }, {})
+
+  return (
+    <div className="fixed inset-0 z-[60] animate-fade-in" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div
+        className="relative mx-auto mt-[10vh] max-w-2xl rounded-2xl bg-card shadow-2xl ring-1 ring-border overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 px-4 h-14 border-b border-border">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar ministério, evento, página…"
+            className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground"
+          />
+          <kbd className="text-[10px] font-mono text-muted-foreground border border-border rounded px-1.5 h-5 inline-flex items-center">
+            ESC
+          </kbd>
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto p-2">
+          {Object.entries(grouped).length === 0 && (
+            <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+              Nada encontrado para &ldquo;{q}&rdquo;
+            </div>
+          )}
+          {Object.entries(grouped).map(([group, arr]) => (
+            <div key={group} className="mb-2">
+              <div className="px-3 pt-2 pb-1 text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+                {group}
+              </div>
+              {arr.map((it) => (
+                <Link key={it.href} href={it.href} onClick={onClose}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm">
+                  <span>{it.title}</span>
+                  <span className="text-xs text-muted-foreground font-mono">{it.href}</span>
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }

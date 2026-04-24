@@ -8,9 +8,25 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-04-23
+**Última atualização:** 2026-04-24 (redesign v2 aplicado — Fraunces + tokens editoriais)
 **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.1
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
+
+> **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
+> `app/globals.css`, `app/layout.tsx`, `app/page.tsx`, `components/banner-carousel.tsx`,
+> `components/layout/header.tsx`, `components/layout/footer.tsx`, `components/section-title.tsx`.
+>
+> Mudanças-chave:
+> - **Fontes novas:** Inter (sans) + **Fraunces** (serif editorial) + **JetBrains Mono** (números/eyebrow)
+> - **Paleta mais calma:** `--background` passou a off-white `#FBFAF7` (leve tom quente), novos tokens `--surface`, `--surface-2`, `--surface-3`
+> - **Raio maior:** `--radius: 1rem` (era 0.75rem) → linguagem mais moderna
+> - **Novas utilities CSS:** `.display`, `.eyebrow`, `.card-soft`, `.btn-primary`, `.btn-ghost`, `.pulse-dot`, `.animate-marquee`, `.ph-stripes`, `.link-ul`, `.bg-grain`
+> - **Header:** agora tem `⌘K` command palette + dropdowns com descrição + botão "Visite-nos"
+> - **Home:** countdown pro próximo culto, marquee de horários, grid editorial com filtros de ministério
+> - **Footer:** wordmark "Canaã" gigante de fundo + CTA "Há um assento esperando por você"
+> - **BannerCarousel:** split text/image editorial + progress dashes + contador 01/04
+>
+> Backend logic preservado (useAuth/profile, logout async, password-strength contract, etc.).
 
 ---
 
@@ -269,34 +285,65 @@ church.aviso = {
 
 ---
 
-## 5. Design tokens existentes (Tailwind v4)
+## 5. Design tokens existentes (Tailwind v4 — redesign 2026-04-24)
 
 Usar estes em vez de cores hard-coded:
 
 ```
 Cores semânticas
-  bg-background    bg-card       bg-muted       bg-popover
-  text-foreground  text-muted-foreground
-  border-border    border-input
-  ring-ring
+  bg-background    #FBFAF7 off-white com toque areia (era #FFFFFF)
+  bg-surface       #FFFFFF cards limpos
+  bg-surface-2     #F4F2ED tom quente sutil (banda secundária)
+  bg-surface-3     #E9E6DF tom quente mais marcado (terceiro nível)
+  bg-card          #FFFFFF
+  bg-muted         #F4F2ED (== surface-2)
+  bg-popover       #FFFFFF
+  text-foreground  #0B1020
+  text-muted-foreground  #5A6478
+  border-border    #E7E3DB
+  ring-ring        #0A2973
 
 Brand PIBAC
-  bg-brand-gradient        (azul gradient do header)
-  bg-brand-gradient-cyan   (variante mais clara)
-  bg-brand-blue            (azul sólido)
+  bg-brand-gradient        (linear-gradient 160° navy → blue)
+  bg-brand-gradient-cyan   (linear-gradient 135° blue → cyan)
+  text-brand-gradient      (mesmo gradient em texto — para "palavras-chave")
+  bg-brand-blue / text-brand-cyan / bg-brand-red
 
 Semântica de estado
-  bg-primary / text-primary / text-primary-foreground
-  bg-accent  / text-accent  (amarelo/dourado do branding)
-  bg-destructive / text-destructive (vermelho)
+  bg-primary / text-primary / text-primary-foreground  (#0A2973)
+  bg-accent  / text-accent  (#00C2FF cyan — highlights)
+  bg-destructive / text-destructive (#FF2A2A vermelho)
+
+Radius
+  rounded-sm/md/lg/xl   (base = 1rem, antes era 0.75rem)
+  rounded-2xl, rounded-3xl, rounded-full  — usados nos cards principais
 
 Severidades (quando precisar)
   red-{50..900}, orange-{...}, yellow-{...}, green-{...}, emerald-{...}
 ```
 
-**Fontes:**
-- `font-serif` — títulos (visual mais formal, cabeçalhos de página)
-- `font-sans` (default) — corpo
+**Fontes (importadas em `app/layout.tsx`):**
+- `font-sans` (default) — **Inter**
+- `font-serif` — **Fraunces** (variável, com SOFT axis) — títulos editoriais, usar via `.display`
+- `font-mono` — **JetBrains Mono** — números, eyebrow/kicker, contadores
+
+**Utilities CSS novas (em `globals.css`):**
+```
+.display           Serif grande com tracking -0.03em e line-height 0.98 (h1/h2/h3)
+.eyebrow           Mono UPPERCASE 0.7rem com tracking 0.16em (kicker acima de títulos)
+.card-soft         Superfície com borda + sombra animada no hover
+.btn-primary       Pill 2.75rem, primary bg, translateY no hover
+.btn-ghost         Pill transparente com borda, usa surface-2 no hover
+.pulse-dot         Bolinha vermelha pulsante (status "ao vivo/próximo culto")
+.animate-marquee   Scroll horizontal infinito (tickers de horários)
+.animate-fade-in / .animate-fade-in-up / .animate-slide-in-left / .animate-pulse-soft
+.hover-lift        Card que sobe sutil no hover
+.ph-stripes        Placeholder listrado (quando não tem imagem)
+.link-ul           Link com underline animado
+.bg-grain          Textura sutil de ruído (superfícies grandes)
+.glow-cyan         Box-shadow cyan (destaques)
+.divider-brand     Linha horizontal cyan com fade nas pontas
+```
 
 ---
 

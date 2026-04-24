@@ -1,27 +1,40 @@
 import { cn } from '@/lib/utils'
 
 interface SectionTitleProps {
+  eyebrow?: string
   title: string
   subtitle?: string
   centered?: boolean
   className?: string
+  as?: 'h1' | 'h2' | 'h3'
 }
 
-export function SectionTitle({ title, subtitle, centered = true, className }: SectionTitleProps) {
+/**
+ * Título de seção — versão redesign.
+ * - Eyebrow mono em caps, minimal
+ * - Display serif com tracking negativo
+ * - Sem "divisor" colorido abaixo (respiro ao invés de enfeite)
+ */
+export function SectionTitle({
+  eyebrow,
+  title,
+  subtitle,
+  centered = true,
+  className,
+  as = 'h2',
+}: SectionTitleProps) {
+  const H = as as 'h1' | 'h2' | 'h3'
   return (
-    <div className={cn(centered && 'text-center', 'mb-8 md:mb-12', className)}>
-      <h2 className="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-foreground text-balance">
+    <div className={cn(centered && 'text-center', 'mb-10 md:mb-14 max-w-3xl', centered && 'mx-auto', className)}>
+      {eyebrow && <div className="eyebrow mb-3">{eyebrow}</div>}
+      <H className="display text-4xl md:text-5xl lg:text-6xl text-foreground text-balance">
         {title}
-      </h2>
+      </H>
       {subtitle && (
-        <p className="mt-3 text-muted-foreground text-base md:text-lg max-w-2xl mx-auto text-pretty">
+        <p className="mt-4 text-muted-foreground text-base md:text-lg leading-relaxed text-pretty">
           {subtitle}
         </p>
       )}
-      <div className={cn('mt-4 flex gap-1', centered ? 'justify-center' : 'justify-start')}>
-        <span className="w-8 h-1 bg-primary rounded-full" />
-        <span className="w-2 h-1 bg-accent rounded-full" />
-      </div>
     </div>
   )
 }

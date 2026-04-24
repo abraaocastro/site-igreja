@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter, Merriweather } from 'next/font/google'
+import { Inter, Fraunces, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Header } from '@/components/layout/header'
@@ -14,10 +14,18 @@ const inter = Inter({
   display: 'swap',
 })
 
-const merriweather = Merriweather({
-  weight: ['300', '400', '700', '900'],
+// Fraunces — títulos editoriais (substitui Merriweather)
+// `axes` só é permitido com `weight: 'variable'`; deixamos fixos p/ ser mais previsível.
+const fraunces = Fraunces({
+  weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
-  variable: '--font-merriweather',
+  variable: '--font-fraunces',
+  display: 'swap',
+})
+
+const jetbrains = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains',
   display: 'swap',
 })
 
@@ -42,11 +50,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // JSON-LD Schema.org: ajuda o Google a entender a entidade (igreja + endereço +
   // pastor + redes sociais) e habilita o "knowledge panel" local.
   // O siteUrl virá da env em produção; fallback pro domínio esperado.
@@ -54,7 +58,10 @@ export default function RootLayout({
   const jsonLd = getChurchJsonLd(siteUrl)
 
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${merriweather.variable} bg-background`}>
+    <html
+      lang="pt-BR"
+      className={`${inter.variable} ${fraunces.variable} ${jetbrains.variable} bg-background`}
+    >
       <head>
         <script
           type="application/ld+json"

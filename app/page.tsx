@@ -2,26 +2,15 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  Calendar,
-  Clock,
-  MapPin,
-  ArrowRight,
-  BookOpen,
-  Heart,
-  Users,
-  Globe,
-  Sparkles,
-  ChevronRight,
-  Church,
-  HandHeart,
+  Calendar, Clock, MapPin, ArrowUpRight,
+  Church, Play, PlayCircle, Sparkles, ArrowRight,
 } from 'lucide-react'
 import { BannerCarousel } from '@/components/banner-carousel'
 import { SectionTitle } from '@/components/section-title'
 import {
   heroBanners as defaultHero,
-  inlineBanners,
   ministerios as defaultMinisterios,
   eventos as defaultEventos,
   horariosCultos,
@@ -36,6 +25,30 @@ function loadCms<T>(key: string, fallback: T): T {
     if (raw) return JSON.parse(raw) as T
   } catch {}
   return fallback
+}
+
+// Próximo culto = próximo domingo 19h
+function useNextService() {
+  const [now, setNow] = useState<Date | null>(null)
+  useEffect(() => {
+    setNow(new Date())
+    const i = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(i)
+  }, [])
+  return useMemo(() => {
+    if (!now) return null
+    const next = new Date(now)
+    const daysToSunday = (7 - now.getDay()) % 7
+    next.setDate(now.getDate() + daysToSunday)
+    next.setHours(19, 0, 0, 0)
+    if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 7)
+    const diff = Math.max(0, next.getTime() - now.getTime())
+    const d = Math.floor(diff / 86400000)
+    const h = Math.floor((diff % 86400000) / 3600000)
+    const m = Math.floor((diff % 3600000) / 60000)
+    const s = Math.floor((diff % 60000) / 1000)
+    return { d, h, m, s, date: next }
+  }, [now])
 }
 
 export default function Home() {
@@ -56,113 +69,121 @@ export default function Home() {
     setMinisterios(loadCms('ministerios', defaultMinisterios))
     setEventos(loadCms('eventos', defaultEventos))
     setTextos(loadCms('textos', textos))
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const next = useNextService()
 
   const proximosEventos = [...eventos]
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .filter((e) => new Date(e.date) >= new Date(new Date().toDateString()))
     .slice(0, 3)
-  const ministeriosDestaque = ministerios.slice(0, 4)
+  const ministeriosDestaque = ministerios.slice(0, 6)
+
+  // Filtros para a grid de ministérios (categoria fake derivada)
+  const [filter, setFilter] = useState<string>('Todos')
+  const cats = ['Todos', 'Adoração', 'Ensino', 'Família', 'Missões']
+  const ministeriosFiltrados = filter === 'Todos'
+    ? ministeriosDestaque
+    : ministeriosDestaque.filter((_, i) => (['Adoração','Ensino','Família','Missões'][i % 4]) === filter)
 
   return (
-    <div className="flex flex-col">
-      {/* Hero Banner */}
-      <BannerCarousel banners={heroBanners} variant="hero" />
+    <div className="flex flex-col bg-background">
+      {/* ── HERO: editorial, imagem + countdown + rotating banners */}
+      <section className="relative pt-6 md:pt-10">
+        <BannerCarousel banners={heroBanners} variant="hero" />
 
-      {/* Horários dos Cultos */}
-      <section className="bg-brand-gradient text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-10 -left-10 h-40 w-40 bg-accent rounded-full blur-2xl" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-            <span className="hidden md:flex items-center gap-1.5 text-accent font-semibold uppercase tracking-wider text-xs">
-              <Sparkles className="h-3.5 w-3.5" />
-              Nossos cultos
-            </span>
-            {horariosCultos.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-accent" />
-                <span className="font-semibold">{c.dia}</span>
-                <span className="opacity-80">
-                  {c.horario} · {c.tipo}
+        {/* Service card flutuante */}
+        <div className="relative -mt-24 md:-mt-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
+          <div className="rounded-2xl bg-surface border border-border shadow-xl shadow-primary/5 p-4 md:p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-destructive/10 text-destructive text-[11px] font-medium">
+                <span className="pulse-dot" /> PRÓXIMO CULTO
+              </span>
+              <div className="hidden md:block w-px h-8 bg-border" />
+            </div>
+            <div className="grid grid-cols-4 gap-3 md:gap-4 items-center">
+              {(['DIAS','HORAS','MIN','SEG'] as const).map((unit, i) => {
+                const val = next ? [next.d, next.h, next.m, next.s][i] : 0
+                return (
+                  <div key={unit} className="text-center">
+                    <div className="display text-3xl md:text-4xl font-variant-numeric-tabular text-foreground">
+                      {String(val).padStart(2,'0')}
+                    </div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mt-0.5">
+                      {unit}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <Link href="/calendario" className="btn-ghost h-10 text-sm">
+                Agenda <Calendar className="h-4 w-4" />
+              </Link>
+              <Link href="/eventos" className="btn-primary h-10 text-sm">
+                <Play className="h-4 w-4" /> Assistir
+              </Link>
+            </div>
+          </div>
+
+          {/* Marquee de horários */}
+          <div className="mt-3 overflow-hidden rounded-full border border-border bg-surface">
+            <div className="animate-marquee whitespace-nowrap py-2.5 flex gap-8 pr-8 w-max">
+              {[...horariosCultos, ...horariosCultos].map((c, i) => (
+                <span key={i} className="inline-flex items-center gap-2 text-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  <span className="font-medium">{c.dia}</span>
+                  <span className="text-muted-foreground">{c.horario} · {c.tipo}</span>
+                  <span className="text-border">•</span>
                 </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Boas-vindas */}
-      <section className="py-16 md:py-24 bg-background">
+      {/* ── BOAS-VINDAS editorial */}
+      <section className="py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 text-primary text-xs font-semibold uppercase tracking-wider mb-4">
-                <Church className="h-3.5 w-3.5" />
-                PIB Capim Grosso
+          <div className="grid lg:grid-cols-12 gap-10 items-start">
+            <div className="lg:col-span-5">
+              <div className="eyebrow mb-5 flex items-center gap-2">
+                <Church className="h-3.5 w-3.5" /> PIB Capim Grosso · desde 1978
               </div>
-              <SectionTitle
-                title={textos.homeTitulo}
-                subtitle={textos.homeSubtitulo}
-                centered={false}
-              />
-              <p className="text-muted-foreground mb-4 leading-relaxed">
-                A Primeira Igreja Batista de Capim Grosso é um lugar onde você pode encontrar
-                paz, comunhão e crescimento espiritual. Aqui, todas as pessoas são bem-vindas,
+              <h2 className="display text-5xl md:text-6xl lg:text-7xl text-balance mb-8">
+                Um lugar para <em className="not-italic text-brand-gradient">voltar pra casa</em>.
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/quem-somos" className="btn-primary">
+                  Conheça-nos <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <Link href="/visao" className="btn-ghost">Nossa Visão</Link>
+              </div>
+            </div>
+            <div className="lg:col-span-7 lg:pt-16">
+              <p className="text-lg md:text-xl leading-relaxed text-foreground/90 mb-6 text-pretty">
+                A Primeira Igreja Batista de Capim Grosso é um lugar onde você pode encontrar paz,
+                comunhão e crescimento espiritual. Aqui, todas as pessoas são bem-vindas —
                 independentemente de sua história.
               </p>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-base md:text-lg leading-relaxed text-muted-foreground mb-10 text-pretty">
                 Nossa missão é proclamar o Evangelho de Jesus Cristo, fazer discípulos e
                 transformar vidas através do amor e da graça de Deus.
               </p>
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/quem-somos"
-                  className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg hover:shadow-primary/30"
-                >
-                  Conheça-nos
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/visao"
-                  className="inline-flex items-center gap-2 border-2 border-primary text-primary px-6 py-3 rounded-md font-medium hover:bg-primary hover:text-primary-foreground transition"
-                >
-                  Nossa Visão
-                </Link>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="absolute -top-6 -right-6 h-32 w-32 bg-accent/20 rounded-full blur-2xl" />
-              <div className="grid grid-cols-2 gap-4 relative">
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  { icon: Heart, title: 'Amor', text: 'Compartilhando o amor de Cristo', gradient: true },
-                  { icon: Users, title: 'Comunhão', text: 'Crescendo juntos em família' },
-                  { icon: BookOpen, title: 'Palavra', text: 'Fundamentados na Bíblia' },
-                  { icon: Globe, title: 'Missões', text: 'Alcançando vidas para Cristo' },
-                ].map((f, i) => (
-                  <div
-                    key={f.title}
-                    className={`group bg-card rounded-xl p-5 border border-border text-center hover-lift ${
-                      i === 0 ? 'bg-brand-gradient text-white border-0' : ''
-                    }`}
-                  >
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 ${
-                        i === 0 ? 'bg-white/20' : 'bg-accent/15'
-                      }`}
-                    >
-                      <f.icon className={`h-6 w-6 ${i === 0 ? 'text-accent' : 'text-primary'}`} />
+                  { k: 'Amor',     v: 'Compartilhando o amor de Cristo' },
+                  { k: 'Comunhão', v: 'Crescendo juntos em família' },
+                  { k: 'Palavra',  v: 'Fundamentados na Bíblia' },
+                  { k: 'Missões',  v: 'Alcançando vidas para Cristo' },
+                ].map((f) => (
+                  <div key={f.k} className="p-5 rounded-2xl bg-surface border border-border">
+                    <div className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                      — {f.k}
                     </div>
-                    <h3 className={`font-semibold mb-1 ${i === 0 ? 'text-white' : 'text-foreground'}`}>
-                      {f.title}
-                    </h3>
-                    <p
-                      className={`text-xs ${i === 0 ? 'text-white/80' : 'text-muted-foreground'}`}
-                    >
-                      {f.text}
-                    </p>
+                    <div className="text-sm leading-snug">{f.v}</div>
                   </div>
                 ))}
               </div>
@@ -171,265 +192,256 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pastor destaque */}
-      <section className="py-16 md:py-24 bg-muted relative overflow-hidden">
-        <div className="absolute inset-0 opacity-5">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle at 30% 30%, #00C2FF 0%, transparent 50%), radial-gradient(circle at 70% 70%, #0A2973 0%, transparent 50%)',
-            }}
-          />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-[420px_1fr] gap-12 items-center">
-            <div className="relative mx-auto lg:mx-0">
-              <div className="absolute inset-0 bg-accent/30 rounded-full blur-3xl -z-10 scale-90" />
-              <div className="relative w-72 h-72 md:w-[22rem] md:h-[22rem] rounded-full overflow-hidden border-8 border-white shadow-2xl">
+      {/* ── PASTOR: split editorial */}
+      <section className="py-24 md:py-32 bg-surface-2 border-y border-border">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-12 gap-10 items-center">
+            <div className="lg:col-span-5">
+              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-border bg-surface-3 ph-stripes">
                 <Image
                   src="/pastor-silas.png"
                   alt="Pr. Silas"
                   fill
-                  sizes="(min-width: 768px) 22rem, 18rem"
+                  sizes="(min-width: 1024px) 40vw, 100vw"
                   className="object-cover"
                 />
-              </div>
-              <div className="absolute top-4 -left-4 bg-brand-gradient text-white px-4 py-2 rounded-full shadow-lg text-sm font-semibold flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-accent animate-pulse-soft" />
-                Pastor Presidente
+                <div className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 h-7 rounded-full bg-background/95 backdrop-blur border border-border text-[11px] font-medium">
+                  <span className="pulse-dot" /> Pastor Presidente
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
+                  <div className="text-white">
+                    <div className="text-[11px] font-mono uppercase tracking-wider opacity-80">Liderando desde</div>
+                    <div className="display text-2xl">Pr. Silas Barreto</div>
+                  </div>
+                </div>
               </div>
             </div>
-            <div>
-              <SectionTitle
-                title="Pr. Silas"
-                subtitle="Liderando com fé, servindo com amor"
-                centered={false}
-              />
-              <p className="text-muted-foreground leading-relaxed mb-4">
+            <div className="lg:col-span-7">
+              <div className="eyebrow mb-3">— Liderança</div>
+              <h2 className="display text-5xl md:text-6xl lg:text-7xl mb-6 text-balance">
+                Liderando com fé,<br/>servindo com amor.
+              </h2>
+              <p className="text-lg leading-relaxed text-muted-foreground mb-4">
                 Sob a liderança do Pastor Silas, a PIBAC tem vivido um tempo de crescimento
                 espiritual, fortalecimento das famílias e avanço missionário na nossa região.
               </p>
-              <p className="text-muted-foreground leading-relaxed mb-6">
+              <p className="text-lg leading-relaxed text-muted-foreground mb-8">
                 Ele dedica sua vida à pregação fiel da Palavra, ao cuidado pastoral e à
                 formação de novos discípulos para a glória de Deus.
               </p>
-              <Link
-                href="/pastor"
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition shadow-md hover:shadow-lg hover:shadow-primary/30"
-              >
-                Conhecer o Pastor
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+              <div className="flex flex-wrap gap-3">
+                <Link href="/pastor" className="btn-primary">
+                  Conhecer o pastor <ArrowUpRight className="h-4 w-4" />
+                </Link>
+                <button className="btn-ghost">
+                  <PlayCircle className="h-4 w-4" /> Última mensagem
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Banner Inline */}
-      <section className="py-8 bg-background">
+      {/* ── MINISTÉRIOS com filtros */}
+      <section className="py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <BannerCarousel banners={inlineBanners} variant="inline" autoplayDelay={4000} />
-        </div>
-      </section>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 mb-10">
+            <div>
+              <div className="eyebrow mb-3">— Nossos Ministérios</div>
+              <h2 className="display text-4xl md:text-5xl lg:text-6xl text-balance max-w-2xl">
+                Encontre o seu lugar para servir.
+              </h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {cats.map((c) => (
+                <button key={c}
+                  onClick={() => setFilter(c)}
+                  className={`h-9 px-4 rounded-full text-sm border transition-colors ${
+                    filter === c
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'bg-surface border-border hover:border-foreground'
+                  }`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* Ministérios */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionTitle
-            title="Nossos Ministérios"
-            subtitle="Diversas formas de servir e crescer em comunidade"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {ministeriosDestaque.map((m) => (
-              <Link
-                key={m.id}
-                href={`/ministerios#${m.id}`}
-                className="group relative bg-card rounded-xl overflow-hidden border border-border shadow-sm hover-lift"
-              >
-                <div className="relative h-44">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {ministeriosFiltrados.map((m, i) => (
+              <Link key={m.id} href={`/ministerios#${m.id}`}
+                className="group card-soft overflow-hidden">
+                <div className="relative h-52 overflow-hidden">
                   <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
+                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
                     style={{ backgroundImage: `url(${m.imageUrl})` }}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary/85 via-primary/30 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <h3 className="text-lg font-serif font-bold text-white">{m.name}</h3>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                  <div className="absolute top-4 left-4 font-mono text-[11px] text-white/90 uppercase tracking-wider">
+                    /{String(i + 1).padStart(2,'0')}
                   </div>
                 </div>
-                <div className="p-4">
-                  <p className="text-sm text-muted-foreground line-clamp-2">{m.description}</p>
-                  <div className="mt-3 flex items-center gap-1 text-xs font-semibold text-primary group-hover:gap-2 transition-all">
-                    Saber mais
-                    <ChevronRight className="h-3.5 w-3.5" />
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="display text-2xl">{m.name}</h3>
+                    <ArrowUpRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-all" />
                   </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">{m.description}</p>
                 </div>
               </Link>
             ))}
           </div>
-          <div className="text-center mt-10">
-            <Link
-              href="/ministerios"
-              className="inline-flex items-center gap-2 text-primary font-medium hover:gap-3 transition-all"
-            >
-              Ver todos os ministérios
-              <ArrowRight className="h-4 w-4" />
+
+          <div className="mt-12 flex justify-center">
+            <Link href="/ministerios" className="btn-ghost">
+              Ver todos os ministérios <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Próximos Eventos */}
-      <section className="py-16 md:py-24 bg-muted">
+      {/* ── EVENTOS */}
+      <section className="py-24 md:py-32 bg-surface-2 border-y border-border">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionTitle title="Próximos Eventos" subtitle="Participe das nossas atividades e cresça conosco" />
+          <SectionTitle eyebrow="— Próximos Eventos" title="Participe e cresça conosco."
+            subtitle="Encontros, celebrações e formações abertas à comunidade." centered={false} />
+
           {proximosEventos.length === 0 ? (
-            <p className="text-center text-muted-foreground">Nenhum evento agendado no momento.</p>
+            <div className="text-center py-10 text-muted-foreground">Nenhum evento agendado no momento.</div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-3 gap-5">
               {proximosEventos.map((e) => (
-                <article
-                  key={e.id}
-                  className="bg-card rounded-xl overflow-hidden border border-border shadow-sm hover-lift"
-                >
-                  <div className="relative h-48">
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${e.imageUrl})` }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-primary/70 to-transparent" />
-                    <div className="absolute top-3 left-3 flex flex-col items-center justify-center h-14 w-14 rounded-lg bg-white text-primary shadow-md">
-                      <span className="text-lg font-bold leading-none">
-                        {format(parseISO(e.date), 'dd')}
-                      </span>
-                      <span className="text-[10px] uppercase font-semibold mt-0.5">
+                <article key={e.id} className="group card-soft overflow-hidden">
+                  <div className="relative h-56 overflow-hidden">
+                    <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
+                         style={{ backgroundImage: `url(${e.imageUrl})` }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <div className="absolute top-4 left-4 flex flex-col items-center justify-center h-14 w-14 rounded-2xl bg-surface/95 backdrop-blur text-foreground border border-border">
+                      <span className="display text-xl leading-none">{format(parseISO(e.date), 'dd')}</span>
+                      <span className="font-mono text-[9px] uppercase tracking-wider mt-1 text-muted-foreground">
                         {format(parseISO(e.date), 'MMM', { locale: ptBR }).replace('.', '')}
                       </span>
                     </div>
                   </div>
-                  <div className="p-5">
-                    <h3 className="font-serif font-bold text-lg text-foreground mb-2">{e.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{e.description}</p>
-                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="h-3.5 w-3.5 text-primary" /> {e.time}
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-primary" /> {e.location}
-                      </span>
+                  <div className="p-6">
+                    <h3 className="display text-2xl mb-2">{e.title}</h3>
+                    <p className="text-sm text-muted-foreground mb-5 line-clamp-2 leading-relaxed">{e.description}</p>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border pt-4">
+                      <span className="inline-flex items-center gap-1.5"><Clock className="h-3.5 w-3.5" /> {e.time}</span>
+                      <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {e.location}</span>
                     </div>
                   </div>
                 </article>
               ))}
             </div>
           )}
-          <div className="flex flex-wrap justify-center gap-3 mt-10">
-            <Link
-              href="/eventos"
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition shadow-md"
-            >
-              Ver todos os eventos
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/calendario"
-              className="inline-flex items-center gap-2 border-2 border-primary text-primary px-6 py-3 rounded-md font-medium hover:bg-primary hover:text-primary-foreground transition"
-            >
-              <Calendar className="h-4 w-4" />
-              Calendário interativo
-            </Link>
+
+          <div className="flex flex-wrap justify-center gap-3 mt-12">
+            <Link href="/eventos" className="btn-primary">Ver todos os eventos <ArrowUpRight className="h-4 w-4" /></Link>
+            <Link href="/calendario" className="btn-ghost"><Calendar className="h-4 w-4" /> Calendário interativo</Link>
           </div>
         </div>
       </section>
 
-      {/* Contribua + Plano */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-6">
-          <Link
-            href="/plano-leitura"
-            className="group relative overflow-hidden rounded-2xl p-8 md:p-10 bg-brand-gradient text-white hover:shadow-2xl transition-shadow"
-          >
-            <div className="absolute -top-10 -right-10 h-40 w-40 bg-accent/40 rounded-full blur-3xl" />
-            <BookOpen className="h-10 w-10 text-accent mb-3" />
-            <h3 className="text-2xl font-serif font-bold mb-2">Plano de Leitura Bíblica</h3>
-            <p className="opacity-90 mb-5">30 dias para mergulhar na Palavra conosco.</p>
-            <span className="inline-flex items-center gap-1 font-medium text-accent group-hover:gap-2 transition-all">
-              Começar agora <ArrowRight className="h-4 w-4" />
-            </span>
+      {/* ── Banner inline + cards duplos */}
+      <section className="py-24 md:py-32">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-5">
+          <Link href="/plano-leitura"
+            className="group relative overflow-hidden rounded-3xl p-8 md:p-10 bg-brand-gradient text-white min-h-[260px] flex flex-col justify-between">
+            <div className="absolute -top-20 -right-20 h-64 w-64 bg-accent/30 rounded-full blur-3xl" />
+            <div>
+              <div className="eyebrow text-accent mb-3">— Devocional</div>
+              <h3 className="display text-3xl md:text-4xl text-balance mb-3 max-w-xs">
+                Plano de Leitura Bíblica
+              </h3>
+              <p className="opacity-80 max-w-sm">30 dias para mergulhar na Palavra conosco.</p>
+            </div>
+            <div className="flex items-center justify-between relative z-10">
+              <span className="font-mono text-xs text-accent">DIA 1 · GÊNESIS</span>
+              <span className="h-10 w-10 rounded-full bg-white text-primary grid place-items-center group-hover:scale-110 transition-transform">
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
           </Link>
-          <Link
-            href="/contribua"
-            className="group relative overflow-hidden rounded-2xl p-8 md:p-10 bg-card border border-border hover-lift"
-          >
-            <div className="absolute -top-10 -right-10 h-40 w-40 bg-accent/15 rounded-full blur-3xl" />
-            <HandHeart className="h-10 w-10 text-primary mb-3" />
-            <h3 className="text-2xl font-serif font-bold mb-2 text-foreground">Contribua com a Obra</h3>
-            <p className="text-muted-foreground mb-5">
-              Dízimos, ofertas e missões — cada semente transforma vidas.
-            </p>
-            <span className="inline-flex items-center gap-1 font-medium text-primary group-hover:gap-2 transition-all">
-              Saiba mais <ArrowRight className="h-4 w-4" />
-            </span>
+
+          <Link href="/contribua"
+            className="group relative overflow-hidden rounded-3xl p-8 md:p-10 bg-surface border border-border min-h-[260px] flex flex-col justify-between">
+            <div>
+              <div className="eyebrow mb-3">— Generosidade</div>
+              <h3 className="display text-3xl md:text-4xl text-balance mb-3 max-w-xs">
+                Contribua com a obra
+              </h3>
+              <p className="text-muted-foreground max-w-sm">
+                Dízimos, ofertas e missões — cada semente transforma vidas.
+              </p>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs text-muted-foreground">PIX · CARTÃO · PRESENCIAL</span>
+              <span className="h-10 w-10 rounded-full bg-primary text-primary-foreground grid place-items-center group-hover:scale-110 transition-transform">
+                <ArrowUpRight className="h-4 w-4" />
+              </span>
+            </div>
           </Link>
         </div>
       </section>
 
-      {/* Versículo */}
-      <section className="py-16 md:py-20 relative overflow-hidden bg-brand-gradient text-white">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 h-64 w-64 bg-accent rounded-full blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 h-64 w-64 bg-primary rounded-full blur-3xl" />
-        </div>
+      {/* ── VERSÍCULO editorial */}
+      <section className="py-28 md:py-40 bg-[#07091A] text-white relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{ backgroundImage: 'radial-gradient(circle at 20% 30%, #00C2FF 0%, transparent 45%), radial-gradient(circle at 80% 70%, #6FA3FF 0%, transparent 45%)' }} />
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="relative h-16 w-16 mx-auto mb-6 opacity-90">
-            <Image src="/logo.png" alt="" fill sizes="64px" className="object-contain" />
-          </div>
-          <blockquote className="text-xl md:text-2xl lg:text-3xl font-serif italic mb-4 text-balance">
+          <div className="eyebrow text-accent mb-6">— Palavra viva</div>
+          <blockquote className="display text-3xl md:text-5xl lg:text-6xl leading-[1.1] text-balance">
             &ldquo;{textos.versiculoDestaque}&rdquo;
           </blockquote>
-          <cite className="text-lg text-accent font-semibold">{textos.versiculoReferencia}</cite>
+          <cite className="mt-8 inline-block font-mono text-sm text-accent tracking-wider not-italic">
+            — {textos.versiculoReferencia}
+          </cite>
         </div>
       </section>
 
-      {/* CTA Final */}
-      <section className="py-16 md:py-24 bg-background">
+      {/* ── CTA final / visite */}
+      <section className="py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="bg-card rounded-2xl shadow-xl border border-border overflow-hidden">
+          <div className="rounded-3xl overflow-hidden border border-border bg-surface">
             <div className="grid lg:grid-cols-2">
-              <div
-                className="h-64 lg:h-auto bg-cover bg-center relative"
-                style={{
-                  backgroundImage:
-                    'url(https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&q=80)',
-                }}
-              >
-                <div className="absolute inset-0 bg-brand-gradient opacity-30" />
+              <div className="relative min-h-[280px] lg:min-h-[440px] ph-stripes">
+                <div className="absolute inset-0 bg-cover bg-center"
+                     style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&q=80)' }} />
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/10 to-transparent" />
+                <div className="absolute top-6 left-6 inline-flex items-center gap-2 px-3 h-7 rounded-full bg-background/95 border border-border text-[11px]">
+                  <MapPin className="h-3 w-3" /> R. Eldorado, 30 · Capim Grosso
+                </div>
               </div>
-              <div className="p-8 md:p-12 flex flex-col justify-center">
-                <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-4">
-                  Venha nos Visitar
+              <div className="p-10 md:p-14 flex flex-col justify-center">
+                <div className="eyebrow mb-4">— Visite-nos</div>
+                <h2 className="display text-4xl md:text-5xl mb-5 text-balance">
+                  Será um prazer receber você.
                 </h2>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  Será um prazer recebê-lo em nossa igreja. Temos um lugar especial
-                  esperando por você e sua família. Venha fazer parte da nossa comunidade!
+                <p className="text-muted-foreground leading-relaxed mb-8 text-pretty">
+                  Temos um lugar especial esperando você e sua família.
+                  Venha fazer parte da nossa comunidade — novos visitantes sempre são bem-vindos.
                 </p>
-                <div className="space-y-3 mb-6">
-                  <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-foreground">{formatAddressOneLine(church.endereco)}</span>
+                <div className="space-y-3 mb-8">
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="h-9 w-9 rounded-full bg-surface-2 grid place-items-center">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <span>{formatAddressOneLine(church.endereco)}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="h-5 w-5 text-primary shrink-0" />
-                    <span className="text-foreground">Domingos às 9h e 19h</span>
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="h-9 w-9 rounded-full bg-surface-2 grid place-items-center">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <span>Domingos · 9h e 19h</span>
                   </div>
                 </div>
-                <Link
-                  href="/contato"
-                  className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition w-fit shadow-md hover:shadow-lg hover:shadow-primary/30"
-                >
-                  Entre em Contato
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/contato" className="btn-primary">
+                    Entre em contato <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                  <Link href="/quem-somos" className="btn-ghost">O que esperar</Link>
+                </div>
               </div>
             </div>
           </div>
