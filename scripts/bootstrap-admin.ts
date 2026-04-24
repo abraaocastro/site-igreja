@@ -1,21 +1,28 @@
 /**
- * bootstrap-admin.ts — cria o primeiro admin do site PIBAC.
+ * bootstrap-admin.ts — cria/redefine o admin padrão do site PIBAC.
  *
- * Rode UMA vez, logo depois de aplicar a migration 001. Cria um usuário
- * admin com senha temporária e a flag `must_change_password: true`, de
- * modo que no primeiro login ele é forçado a escolher uma senha forte.
+ * Rode logo depois de aplicar a migration 001. Cria (ou recria) um usuário
+ * admin com a senha PADRÃO e a flag `must_change_password: true`, de modo
+ * que no primeiro login ele é forçado a escolher uma senha forte.
+ *
+ * 🔑 LOGIN PADRÃO:
+ *   email: dammabelmont@gmail.com
+ *   senha: PibacAdmin@2026
  *
  * Pré-requisitos em .env.local:
  *   NEXT_PUBLIC_SUPABASE_URL=...
  *   SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
  *
  * Uso:
+ *   npm run bootstrap:admin
+ *   # ou
  *   npx tsx scripts/bootstrap-admin.ts
  *
- * Opcional — override via flags ou env:
- *   ADMIN_EMAIL=foo@bar.com ADMIN_PASSWORD=... npx tsx scripts/bootstrap-admin.ts
+ * Opcional — override via env:
+ *   ADMIN_EMAIL=foo@bar.com ADMIN_PASSWORD=... npm run bootstrap:admin
  *
- * Idempotente: se o e-mail já existe, promove pra admin + reaplica a flag.
+ * Idempotente: se o e-mail já existe, RESETA a senha pra padrão + promove
+ * pra admin + reaplica a flag must_change_password.
  */
 
 import 'dotenv/config'
@@ -40,19 +47,12 @@ try {
 
 const DEFAULT_ADMIN_EMAIL = 'dammabelmont@gmail.com'
 const DEFAULT_ADMIN_NAME = 'Administrador PIBAC'
-
-function generateTempPassword(): string {
-  // Senha temporária previsível-o-suficiente-pra-digitar, mas respeitando
-  // os requisitos do checklist (12+ caracteres, mistura de tudo). Como o
-  // usuário é obrigado a trocar no primeiro login, não importa que seja
-  // "fraca" em termos zxcvbn — importa que ele consiga digitar sem erro.
-  const adjectives = ['Azul', 'Verde', 'Forte', 'Alegre', 'Calmo']
-  const nouns = ['Sol', 'Rio', 'Mar', 'Leao', 'Raio']
-  const adj = adjectives[Math.floor(Math.random() * adjectives.length)]
-  const noun = nouns[Math.floor(Math.random() * nouns.length)]
-  const num = Math.floor(10 + Math.random() * 90)
-  return `${adj}-${noun}-${num}!temp`
-}
+// Senha padrão FIXA para o primeiro acesso. Atende ao checklist (12+ chars,
+// upper, lower, número, símbolo) e é fácil de digitar. Como o usuário é
+// FORÇADO a trocar no primeiro login (must_change_password=true), o fato
+// dela ser conhecida não é problema — ela vive ~30 segundos por conta.
+// Override possível via env: ADMIN_PASSWORD=...
+const DEFAULT_ADMIN_PASSWORD = 'PibacAdmin@2026'
 
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -73,8 +73,8 @@ async function main() {
 
   const email = (process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL).trim().toLowerCase()
   const name = process.env.ADMIN_NAME || DEFAULT_ADMIN_NAME
-  const password = process.env.ADMIN_PASSWORD || generateTempPassword()
-  const passwordWasGenerated = !process.env.ADMIN_PASSWORD
+  const password = process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD
+  const usingDefaultPassword = !process.env.ADMIN_PASSWORD
 
   const supabase = createClient(url, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -101,11 +101,15 @@ async function main() {
   let userId: string
 
   if (found) {
-    console.log('ℹ Usuário já existe. Reforçando role=admin + must_change_password.')
+    console.log('ℹ Usuário já existe. Resetando senha pra padrão + role=admin + must_change_password.')
     userId = found.id
 
-    // Atualizar metadata pra garantir a flag
+    // Atualizar metadata + senha. Como rodar o bootstrap é uma operação
+    // explícita ("me devolve o login padrão"), faz sentido resetar a senha
+    // mesmo que o usuário já exista — caso contrário a "senha padrão"
+    // exibida no console não seria realmente válida.
     const { error: updErr } = await supabase.auth.admin.updateUserById(userId, {
+      password,
       user_metadata: {
         ...found.user_metadata,
         nome: name,
@@ -113,7 +117,7 @@ async function main() {
       },
     })
     if (updErr) {
-      console.error('❌ Erro ao atualizar metadata:', updErr.message)
+      console.error('❌ Erro ao atualizar usuário:', updErr.message)
       process.exit(1)
     }
   } else {
@@ -151,21 +155,22 @@ async function main() {
   console.log('')
   console.log('  ┌─────────────────────────────────────────────────────┐')
   console.log(`  │ email:             ${email.padEnd(32)} │`)
-  if (passwordWasGenerated && !found) {
-    console.log(`  │ senha temporária:  ${password.padEnd(32)} │`)
-  } else if (!found) {
-    console.log(`  │ senha temporária:  (definida via ADMIN_PASSWORD)   │`)
+  if (usingDefaultPassword) {
+    console.log(`  │ senha padrão:      ${password.padEnd(32)} │`)
   } else {
-    console.log('  │ senha:             (mantida — usuário já existia)  │')
+    console.log(`  │ senha:             (definida via ADMIN_PASSWORD)   │`)
   }
   console.log('  └─────────────────────────────────────────────────────┘')
   console.log('')
   console.log('Próximos passos:')
   console.log('  1. npm run dev')
   console.log('  2. Abra http://localhost:3000/login')
-  console.log('  3. Entre com o e-mail acima e a senha temporária')
+  console.log('  3. Entre com o e-mail e a senha acima')
   console.log('  4. Você será redirecionado para /admin/primeiro-acesso')
   console.log('  5. Escolha uma senha forte (gerador disponível na tela)')
+  console.log('')
+  console.log('💡 Esqueceu a senha depois de trocar? Rode esse script de novo')
+  console.log('   pra resetar pra senha padrão e cair no primeiro-acesso.')
   console.log('')
 }
 
