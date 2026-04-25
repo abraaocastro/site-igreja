@@ -1,5 +1,8 @@
 /**
- * Middleware — defesa em profundidade no lado do servidor.
+ * Proxy — defesa em profundidade no lado do servidor.
+ *
+ * (Next.js 16 renomeou a convenção `middleware.ts` → `proxy.ts`. Mesma
+ * runtime/comportamento, só nome novo.)
  *
  * Roda antes de cada request a rotas protegidas. Garante 3 coisas:
  *   1. /admin/* sem sessão → redireciona pra /login
@@ -8,13 +11,13 @@
  *   3. Mantém os cookies de sessão renovados (requisito do @supabase/ssr)
  *
  * Guard client-side continua existindo em `app/admin/page.tsx` pra UX, mas
- * é apenas cosmético — este middleware é a barreira real de segurança.
+ * é apenas cosmético — este proxy é a barreira real de segurança.
  */
 
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Response mutable — `supabase.auth.getUser()` pode renovar cookies nela.
   let response = NextResponse.next({
     request: { headers: request.headers },
