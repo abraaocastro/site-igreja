@@ -34,7 +34,11 @@ import { resolve } from 'node:path'
 // então tentamos ler manualmente se .env não tem tudo.
 try {
   const envLocal = readFileSync(resolve(process.cwd(), '.env.local'), 'utf8')
-  for (const line of envLocal.split('\n')) {
+  // \r/\n: arquivos salvos no Windows costumam vir com CRLF. O regex `(.*)$`
+  // não capta o `\r` final (`.` não casa com line terminators no JS), então
+  // tiramos o `\r` antes de processar.
+  for (const rawLine of envLocal.split('\n')) {
+    const line = rawLine.replace(/\r$/, '')
     const match = line.match(/^([A-Z_][A-Z0-9_]*)=(.*)$/)
     if (match && !process.env[match[1]]) {
       // Remove aspas envolventes se existirem
@@ -138,14 +142,20 @@ async function main() {
     userId = created.user.id
   }
 
-  // 2. Garantir que o profile tenha role=admin (trigger criou com default
-  //    'conteudista'; precisamos promover).
+  // 2. Garantir que o profile exista E tenha role=admin.
+  //    Usamos upsert (em vez de update) porque o usuário pode ter sido
+  //    criado ANTES da trigger handle_new_user existir (caso típico:
+  //    bootstrap rodou, falhou no update, depois aplicou-se a migration).
+  //    Nesse cenário não existe linha em profiles pra esse id e o update
+  //    silenciosamente afetaria 0 linhas.
   const { error: roleErr } = await supabase
     .from('profiles')
-    .update({ role: 'admin', nome: name })
-    .eq('id', userId)
+    .upsert(
+      { id: userId, email, nome: name, role: 'admin' },
+      { onConflict: 'id' }
+    )
   if (roleErr) {
-    console.error('❌ Erro ao atualizar role no profile:', roleErr.message)
+    console.error('❌ Erro ao gravar profile:', roleErr.message)
     console.error('   A tabela profiles existe? Rode supabase/migrations/001_profiles_and_roles.sql')
     process.exit(1)
   }
