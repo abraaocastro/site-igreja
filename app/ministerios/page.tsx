@@ -4,21 +4,9 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Search, Users, UserCheck, ArrowRight, Heart, Music, Baby, Globe, BookOpen, HandHeart, Instagram } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
-import { ministerios as defaultMinisterios } from '@/lib/data'
-import { cn } from '@/lib/utils'
+import { getMinisterios, type CmsMinisterio } from '@/lib/cms'
 
-type MinisterioLike = (typeof defaultMinisterios)[number]
-
-function loadCms(): MinisterioLike[] {
-  try {
-    const raw = localStorage.getItem('pibac-cms-ministerios')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch {}
-  return defaultMinisterios
-}
+type MinisterioLike = CmsMinisterio
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   'Louvor e Adoração': Music,
@@ -30,10 +18,18 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 }
 
 export default function MinisteriosPage() {
-  const [ministerios, setMinisterios] = useState(defaultMinisterios)
+  const [ministerios, setMinisterios] = useState<MinisterioLike[]>([])
   const [query, setQuery] = useState('')
 
-  useEffect(() => setMinisterios(loadCms()), [])
+  useEffect(() => {
+    let cancelled = false
+    getMinisterios().then((rows) => {
+      if (!cancelled) setMinisterios(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()

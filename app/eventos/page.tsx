@@ -4,21 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, MapPin, Search, Filter, ArrowRight, SortAsc } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
-import { eventos as defaultEventos } from '@/lib/data'
+import { getEventos, type CmsEvento } from '@/lib/cms'
 import { cn } from '@/lib/utils'
 
-type EventoLike = (typeof defaultEventos)[number]
-
-function loadCms(): EventoLike[] {
-  try {
-    const raw = localStorage.getItem('pibac-cms-eventos')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed
-    }
-  } catch {}
-  return defaultEventos
-}
+type EventoLike = CmsEvento
 
 function parseLocalDate(iso: string) {
   const [y, m, d] = iso.split('-').map(Number)
@@ -26,13 +15,21 @@ function parseLocalDate(iso: string) {
 }
 
 export default function EventosPage() {
-  const [eventos, setEventos] = useState<EventoLike[]>(defaultEventos)
+  const [eventos, setEventos] = useState<EventoLike[]>([])
   const [query, setQuery] = useState('')
   const [categoria, setCategoria] = useState('todas')
   const [view, setView] = useState<'proximos' | 'passados'>('proximos')
   const [sort, setSort] = useState<'data' | 'titulo'>('data')
 
-  useEffect(() => setEventos(loadCms()), [])
+  useEffect(() => {
+    let cancelled = false
+    getEventos().then((rows) => {
+      if (!cancelled) setEventos(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const today = useMemo(() => {
     const d = new Date()
@@ -221,7 +218,10 @@ function EventoCard({ evento }: { evento: EventoLike }) {
   const d = parseLocalDate(evento.date)
   return (
     <article className="group bg-card rounded-xl overflow-hidden border border-border shadow-sm hover-lift">
-      <div className="relative h-44 bg-cover bg-center" style={{ backgroundImage: `url(${evento.imageUrl})` }}>
+      <div
+        className="relative h-44 bg-cover bg-center"
+        style={{ backgroundImage: evento.imageUrl ? `url(${evento.imageUrl})` : undefined }}
+      >
         <div className="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
         <span
           className={cn(

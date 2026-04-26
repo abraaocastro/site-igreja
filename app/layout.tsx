@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
+import { AvisoBanner } from '@/components/aviso-banner'
 import { AuthProvider } from '@/lib/auth'
 import { Toaster } from '@/components/ui/sonner'
 import { getChurchJsonLd } from '@/lib/site-data'
@@ -71,6 +72,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body className="font-sans antialiased min-h-screen flex flex-col">
         <AuthProvider>
+          {/* Banner global de avisos (Phase 4). Self-renderiza null se inativo. */}
+          <AvisoBanner />
           <Header />
           <main className="flex-1">{children}</main>
           <Footer />

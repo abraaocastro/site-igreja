@@ -4,16 +4,16 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-23
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.1
+> **Última atualização:** 2026-04-25 (Phase 8 entregue — CMS no Supabase)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.4
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** Phase 3 (Auth Supabase) — código pronto, pendente setup manual do stakeholder
+> **Fase em andamento:** **nenhuma** — Phases 1–4 + **8** ✅ concluídas. Phases 5/6 fundidas em 8. Próxima recomendada: **Phase 7 (SEO)**.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
 > - **Claude Design (frontend):** páginas, componentes visuais, estilos.
 >
-> Backend nunca mexe em JSX/CSS sem pedido explícito. Frontend nunca mexe em `lib/`, `supabase/`, `middleware.ts`, `scripts/` nem em `__tests__/`. O contrato vive em `SPECDESIGN.md`.
+> Backend nunca mexe em JSX/CSS sem pedido explícito. Frontend nunca mexe em `lib/`, `supabase/`, `proxy.ts`, `scripts/` nem em `__tests__/`. O contrato vive em `SPECDESIGN.md`.
 
 ---
 
@@ -60,7 +60,13 @@ o agente deve:
 | `cec495d` | feat(phases-1-2): identidade canônica + geolocalização | Criou `data/church.json`, `lib/site-data.ts`, JSON-LD no layout, refactor de footer/contato/pastor/admin pra consumir JSON, Maps deep-links |
 | `aec9241` | feat(phase-1): popular church.json com dados reais + ministérios com líderes | Respostas do questionário aplicadas; ministérios reais; infra PIX pronta (sem chave) |
 | `2509b21` | docs: PROGRESS.md handoff | Documento inicial |
-| _pending_ | feat(phase-3): auth real com Supabase + first-login forçado + TDD | Veja seção 8 |
+| `f471f14` | feat(phase-3): auth real com Supabase + first-login forçado + TDD | Migration profiles+RLS+trigger, supabase clients (browser/server/admin), useAuth refatorado, password-strength + componente, /admin/primeiro-acesso, middleware, bootstrap-admin script, vitest+RTL+jsdom (32 testes) |
+| `8ba0706` | feat(design): aplicar redesign editorial do Claude Design | Fraunces + JetBrains Mono, tokens surface/surface-2/surface-3, radius 1rem, .display/.eyebrow/.card-soft/.btn-primary/.btn-ghost, command palette ⌘K, countdown próximo culto, marquee horários, footer wordmark Canaã |
+| `c9b5c54` | feat(admin): senha padrão fixa + reset idempotente no bootstrap | `DEFAULT_ADMIN_PASSWORD = 'PibacAdmin@2026'`; rodar de novo reseta a senha + reativa must_change_password |
+| `480cd11` | fix(bootstrap): parser de CRLF + upsert no profile | Tira `\r` antes do regex (`.env.local` salvo no Windows); troca `update` por `upsert` em `profiles` (cobre user criado antes da trigger existir) |
+| `9a74ef5` | chore(next16): renomeia middleware.ts → proxy.ts | Convenção nova do Next 16 (mesmo runtime, só nome novo do arquivo + da função exportada) |
+| _pending_ | feat(phase-4): banner global de avisos + admin UI + TDD | `<AvisoBanner>` (3 severidades, dispense por sessionStorage com chave por hash da mensagem), injetado em `app/layout.tsx`, aba "Avisos" em `/admin` com toggle/severidade/preview ao vivo, 12 testes RTL (44 totais agora) |
+| _pending_ | feat(phase-8): CMS backend no Supabase | Migration 002 com 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos`, `cms_avisos`) + helper `is_cms_writer()` + RLS (público lê, writer escreve) + bucket `public-images` + seeds. `lib/cms.ts` com readers/writers + `uploadImage`. Admin reescrito pra usar banco. Páginas públicas (home, eventos, calendario, ministerios) e AvisoBanner refatorados pra ler do banco com fallback nos defaults estáticos. 15 testes novos (59 totais). |
 
 ---
 
@@ -156,7 +162,9 @@ PASSWORD_MIN_SCORE = 3
 />
 ```
 
-### `middleware.ts` (root)
+### `proxy.ts` (root) — antigo `middleware.ts`
+> Next.js 16 renomeou `middleware.ts → proxy.ts` e a função exportada `middleware → proxy`. Mesmo comportamento.
+
 - `/admin/*` sem sessão → `/login?next=<path>`
 - `must_change_password: true` + rota `/admin/*` ≠ primeiro-acesso → força `/admin/primeiro-acesso`
 - Já trocou a senha + rota = primeiro-acesso → manda pra `/admin`
@@ -248,7 +256,7 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | `components/layout/header.tsx` | `useAuth()` — menu de usuário |
 | `components/layout/footer.tsx` | Endereço (Maps), telefone, WhatsApp, email, socials |
 | `components/password-strength.tsx` | `evaluatePassword` + `generatePassphrase` |
-| `middleware.ts` | `createServerClient` — checa sessão em `/admin/*` |
+| `proxy.ts` | `createServerClient` — checa sessão em `/admin/*` |
 
 ---
 
@@ -258,51 +266,35 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 |---|---|---|---|
 | 1 | Fundação: `data/` + tipos + migração de hard-codes | ✅ Completa | `cec495d` + `aec9241` |
 | 2 | Geolocalização (Maps embed, directions, search) | ✅ Completa | `cec495d` |
-| **3** | **Auth real com Supabase + TDD + primeiro-acesso forçado** | **✅ Código completo; pendente setup manual do usuário** | _pending commit_ |
-| 4 | Avisos globais (banner toggleável com severidade) | ⏭️ **Próxima** | — |
-| 5 | Programação (eventos + horários consolidados) | ⬜ Pendente | — |
-| 6 | Admin UI pra editar JSON (via PR ou backend) | ⬜ Pendente | — |
-| 7 | SEO completo (sitemap, robots, OG, rich results) | ⬜ Pendente | Base JSON-LD já entregue |
-| 8 | Backend de conteúdo real (substitui localStorage) | ⬜ Pendente | — |
+| 3 | Auth real com Supabase + TDD + primeiro-acesso forçado | ✅ Completa (login funcionando local+prod) | `f471f14` + `c9b5c54` + `480cd11` |
+| ~ | Redesign editorial (fora de fase numerada) | ✅ Aplicado | `8ba0706` |
+| ~ | Migração `middleware.ts → proxy.ts` (Next 16) | ✅ Aplicada | `9a74ef5` |
+| 4 | Avisos globais (banner toggleável com severidade) | ✅ Completa | _pending commit_ |
+| 5 | ~~Programação (eventos + horários consolidados)~~ | ☑️ **Fundida em Phase 8** (eventos vivem no banco) | — |
+| 6 | ~~Admin UI pra editar JSON~~ | ☑️ **Fundida em Phase 8** (admin escreve direto no banco) | — |
+| **7** | **SEO completo (sitemap, robots, OG, rich results)** | ⏭️ **Próxima sugerida** — base JSON-LD já entregue | — |
+| 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | _pending commit_ |
 
 ---
 
-## 8.5. Phase 3 — o que o USUÁRIO ainda precisa fazer
+## 8.5. Phase 3 — concluído (2026-04-25)
 
-Código completo, testes verdes, build passa. Mas pra auth **funcionar em produção**, três passos manuais:
+Todos os passos manuais que o stakeholder precisava fazer foram executados:
 
-### 1) Rodar a migration no Supabase
-- Abrir https://app.supabase.com → projeto PIBAC → SQL Editor → New query
-- Colar o conteúdo de `supabase/migrations/001_profiles_and_roles.sql`
-- Run → verificar em Table Editor que `profiles` existe
+- ✅ Migration `001_profiles_and_roles.sql` rodou no Supabase Dashboard
+- ✅ `.env.local` preenchido com `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
+- ✅ `npm run bootstrap:admin` rodou com sucesso → criou `dammabelmont@gmail.com` com `must_change_password: true`
+- ✅ Login validado em `localhost:3000`
+- ✅ Vercel: as 4 envs foram adicionadas em Project Settings → Environment Variables, redeploy disparado, login funcionando em `https://site-igreja-chi.vercel.app`
 
-### 2) Configurar envs em `.env.local`
-Criar o arquivo na raiz (NUNCA commitar):
-```
-NEXT_PUBLIC_SUPABASE_URL=https://rlicinlfyavsrfnfqncu.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_AShkGdIhygg6XmOOdZm8Hw_1WPWtq85
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_XXXXXX  ← pegar em Settings → API → service_role
-```
+### 🔑 Login padrão (registrado em `scripts/bootstrap-admin.ts`)
+- **email:** `dammabelmont@gmail.com`
+- **senha:** `PibacAdmin@2026` (override via `ADMIN_PASSWORD=...`)
+- Rodar `npm run bootstrap:admin` de novo **reseta** pra essa senha + reativa `must_change_password=true` (serve como "esqueci a senha").
 
-### 3) Rodar o bootstrap
-```
-npm run bootstrap:admin
-```
-O script:
-- Cria usuário `dammabelmont@gmail.com` com `must_change_password: true`
-- Imprime a senha temporária no console
-- Se o usuário já existe, só re-promove pra admin e reaplica a flag
-
-### 4) Primeiro login
-- `npm run dev`
-- Abrir http://localhost:3000/login
-- Entrar com o e-mail + senha temporária impressa no console
-- Ser redirecionado pra `/admin/primeiro-acesso`
-- Escolher senha forte (ou clicar "Gerar senha pra mim")
-- Após salvar, vai pra `/admin`
-
-### 5) Em produção (Vercel)
-Adicionar as 3 envs em **Vercel → Project Settings → Environment Variables** (marcar "Production" para todas, e **NÃO** marcar "Expose to browser" na `SUPABASE_SERVICE_ROLE_KEY`).
+### Lições aprendidas (consolidadas no script)
+- `.env.local` salvo no Windows vem com CRLF. O parser inline foi corrigido pra remover `\r` antes do regex.
+- Quando o user é criado **antes** da trigger `handle_new_user` existir, `update profiles` afeta 0 linhas silenciosamente. Trocamos por `upsert` pra cobrir esse caso.
 
 ---
 
@@ -312,8 +304,10 @@ Adicionar as 3 envs em **Vercel → Project Settings → Environment Variables**
 2. **`lib/data.ts`** ainda tem `heroBanners`, `inlineBanners`, `eventos`, `planoLeitura`, `horariosCultos` hardcoded. Migrar em Phases 5/8.
 3. **Git CRLF warnings** ao commitar em Windows — cosmético, não bloqueia.
 4. **Next build pula validação de tipos** (config default) — `npm run typecheck` é o gate correto antes de commitar.
-5. **Middleware file convention** — Next 16 avisa que `middleware.ts` vai virar `proxy.ts` em versão futura. Migração trivial quando quebrar.
+5. ~~**Middleware file convention**~~ → resolvido em `9a74ef5` — `middleware.ts → proxy.ts`.
 6. **1 vuln high severity no Next 16.0.0–16.2.2** (DoS em Server Components) — aguarda upstream patch; sem fix disponível na faixa 16.x atual.
+7. **Senha padrão visível no repositório** (`PibacAdmin@2026` em `scripts/bootstrap-admin.ts`). É aceitável porque (a) só vive até o admin trocar, (b) o middleware força a troca no primeiro login, (c) o uso pretendido é "esqueci, reseta". Mas se mudar a postura de segurança, vale rotacionar.
+8. **Lentidão do `npm run dev`** — Turbopack faz primeira compilação por rota. Esperado; não afeta produção (Vercel já vem pré-built).
 
 ---
 
@@ -330,6 +324,74 @@ Antes de pushar:
 - [ ] Se a fase tocou em auth/secrets: zero `NEXT_PUBLIC_` em vars sensíveis
 - [ ] Commit message segue convenção `feat(phase-N): descricao curta`
 - [ ] `PROGRESS.md` atualizado com o que mudou (seções 2 e 8)
+
+---
+
+## 10.5. O que está faltando (mapa de pendências)
+
+### 🔴 Bloqueios para "site pronto pro mundo"
+
+- **E-mail oficial da igreja** — `data/church.json#contato.email` ainda é TODO. Sem isso, `mailtoHref()` retorna null e o card de e-mail no `/contato` some.
+- **Chave PIX real** — `data/church.json#pix.chave` é TODO. `/contribua` mostra "em configuração" no lugar do botão de copiar PIX.
+
+### ✅ Phase 4 — Avisos banner (entregue 2026-04-25)
+
+- `components/aviso-banner.tsx` com 3 severidades, dispense por sessionStorage (chave por hash da mensagem) + suporte a prop ad-hoc
+- Injetado em `app/layout.tsx` acima do `<Header>`
+- Aba "Avisos" em `/admin` com toggle, escolha de severidade, mensagem, link opcional, preview ao vivo
+- 12 testes RTL (`__tests__/components/aviso-banner.test.tsx`)
+
+### ✅ Phase 8 — CMS backend (entregue 2026-04-25)
+
+- `supabase/migrations/002_cms_content.sql`: 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos` KV, `cms_avisos` singleton), helper `is_cms_writer()`, RLS (público lê, writer escreve), bucket Storage `public-images` (público), triggers `updated_at`, seeds idempotentes a partir de `lib/data.ts`
+- `lib/cms.ts`: tipos camelCase, readers (`getBanners/Ministerios/Eventos/Textos/Aviso`) com fallback pros defaults se DB offline/vazio, writers (`upsert/create/delete` por entidade + `saveTextos`/`saveAviso`), `uploadImage(file)` pro bucket
+- `app/admin/page.tsx`: reescrito — sem localStorage, lê e escreve no banco, upload de imagem com toast de progresso, refresh manual
+- Páginas públicas (`/`, `/eventos`, `/calendario`, `/ministerios`) e `<AvisoBanner>`: leem do banco via `useEffect`, hidratam após primeira pintura
+- 15 testes novos em `__tests__/lib/cms.test.ts` (mock chainable do builder Supabase) — total geral: **59 passando**
+- **Manual setup necessário:** rodar `002_cms_content.sql` no SQL Editor (uma vez)
+
+### ☑️ Phase 5 — fundida em Phase 8
+
+Eventos/banners/ministérios/textos vivem no Supabase agora. `lib/data.ts`
+ainda existe como defaults pro fallback (página renderiza mesmo se DB
+estiver offline), mas não é mais a fonte de verdade em produção. Não
+precisa mais migrar pra JSONs separados — o banco resolve.
+
+### ☑️ Phase 6 — fundida em Phase 8
+
+Admin escreve direto no banco com upload de imagem pro bucket. Não
+precisa mais de export/import JSON manual nem diff visual — toda mudança
+é persistida ao salvar.
+
+### 🟡 Phase 7 — SEO local (próxima sugerida)
+
+- `metadata` página-por-página (title, description, OG, Twitter) — atualmente só `app/layout.tsx`
+- `app/sitemap.ts` dinâmico (lê `data/church.json` + rotas estáticas)
+- `app/robots.ts` (bloquear `/admin` e `/login` da indexação)
+- Auditoria Lighthouse + correções de a11y
+- Submeter sitemap no Google Search Console
+
+### 🟡 Resíduos da Phase 8 (não bloqueantes)
+
+- API route `/api/admin/invite-conteudista` (admin convida via service_role)
+- Recuperação de senha por e-mail (Supabase tem nativo, só precisa UI)
+- Server actions + `revalidatePath` (hoje é tudo client-side)
+- Cleanup de imagens órfãs no bucket quando admin troca a foto
+
+### 🔵 UI / componentes novos pendentes (do `SPECDESIGN.md`)
+
+- ~~`<AvisoBanner>`~~ → entregue (`components/aviso-banner.tsx`)
+- Recovery password page — pendente
+- Convite de conteudista (form `/admin/usuarios`) — pendente
+
+### 🔵 Conteúdo (não-código, depende do stakeholder)
+
+- E-mail oficial da secretaria
+- Chave PIX da tesouraria
+- Fotos reais dos ministérios (atualmente Unsplash)
+- Foto adicional do pastor / fotos do templo / fotos de eventos (atualmente Unsplash)
+- Bio mais longa do pastor (a atual é ok, 2 parágrafos)
+- Hash dos cultos especiais (batismos, congressos) pra entrar em `eventos.especiais`
 
 ---
 

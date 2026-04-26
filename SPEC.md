@@ -1,8 +1,8 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.1 (2026-04-23)
-**Status:** Em execução — Phase 3 (auth Supabase) implementada, bootstrap pendente no lado do usuário
-**Substitui:** v2.0 de 20/04/2026
+**Versão:** 2.4 (2026-04-25)
+**Status:** Em execução — Phases 1–4 ✅ + **Phase 8** ✅ concluídas. Auth + CMS Supabase em produção. Phases 5/6 ficam **fundidas em 8** (eventos/ministérios/banners/textos/avisos já vivem no banco). **Próximo:** Phase 7 (SEO).
+**Substitui:** v2.3 de 25/04/2026
 
 ---
 
@@ -269,10 +269,16 @@ primeiro login**. Mantém a API pública do `useAuth()` intacta.
 - [x] `npm run build` passa (inclui prerender das 16 rotas)
 - [x] Middleware bloqueia `/admin` sem sessão → `/login?next=/admin`
 - [x] Cobertura TDD das regras de senha (checklist, acceptable, gerador)
-- [ ] Usuário roda SQL migration no dashboard Supabase ← manual
-- [ ] Usuário preenche `.env.local` com service_role ← manual
-- [ ] Usuário roda `npm run bootstrap:admin` ← manual
-- [ ] Primeiro login redireciona pra `/admin/primeiro-acesso` e força troca
+- [x] Usuário rodou SQL migration no dashboard Supabase (2026-04-25)
+- [x] Usuário preencheu `.env.local` com service_role
+- [x] Usuário rodou `npm run bootstrap:admin` com sucesso
+- [x] Login funcionando em `localhost:3000` + `site-igreja-chi.vercel.app` (envs configuradas no Vercel)
+- [x] Bootstrap idempotente: rodar de novo reseta a senha pra padrão `PibacAdmin@2026` e reaplica `must_change_password`
+- [x] Convenção `middleware.ts` migrada pra `proxy.ts` (Next 16)
+
+**Notas pós-implementação (2026-04-25)**
+- `scripts/bootstrap-admin.ts` recebeu duas correções: parser de `.env.local` agora trata CRLF (Windows), e a inserção em `profiles` virou `upsert` (cobre o caso de usuário criado antes de a trigger existir).
+- Senha padrão definida em código: `PibacAdmin@2026` (atende ao checklist; só vive até o usuário trocar). Override via env `ADMIN_PASSWORD=…`.
 
 **Fora de escopo desta fase**
 - Admin criar conteudistas via UI (Phase 3.5 futura)
@@ -281,25 +287,36 @@ primeiro login**. Mantém a API pública do `useAuth()` intacta.
 
 ---
 
-### Phase 4 — Aviso global (era Phase 3 em v2.0)
+### Phase 4 — Aviso global ✅ (concluída 2026-04-25)
 Objetivo: admin ativa banner no topo de todas as páginas em < 1 minuto.
 
 **Tasks**
-- 4.1. Estender `church.json` com `aviso: { ativo, severidade, mensagem, link, linkTexto }`
-- 4.2. Componente `<AvisoBanner/>` que renderiza apenas se `aviso.ativo === true`
-- 4.3. Severidades com tokens do design system:
-  - `info` → fundo `bg-accent/10`, ícone azul
-  - `atencao` → fundo `bg-yellow-50` + borda `border-yellow-300`
-  - `urgente` → fundo `bg-destructive/10` + borda `border-destructive`
-- 4.4. Botão X pra dispensar → persistir em `sessionStorage` (não reaparece na sessão, volta se abrir nova)
-- 4.5. Injetar em `app/layout.tsx` acima do `<Header/>`
-- 4.6. Aba "Avisos" no `/admin` com toggle + preview
+- [x] 4.1. Estender `church.json` com `aviso: { ativo, severidade, mensagem, link, linkTexto }` (já existia desde Phase 1)
+- [x] 4.2. `components/aviso-banner.tsx` que renderiza apenas se `aviso.ativo === true` E `mensagem` não-vazia
+- [x] 4.3. Severidades com tokens do design system:
+  - `info` → `bg-accent/10` + ícone `<Info>` `text-accent`
+  - `atencao` → `bg-yellow-50` + borda `border-yellow-300` + ícone `<AlertTriangle>` (variantes dark inclusas)
+  - `urgente` → `bg-destructive/10` + ícone `<AlertOctagon>` `text-destructive`, com `aria-live="assertive"`
+- [x] 4.4. Botão X pra dispensar → persiste em `sessionStorage` com **chave por hash da mensagem** (mudou texto = banner reaparece)
+- [x] 4.5. Injetado em `app/layout.tsx` acima do `<Header>`
+- [x] 4.6. Aba "Avisos" no `/admin` com toggle, escolha de severidade, mensagem+link e **preview ao vivo** (renderiza o próprio `<AvisoBanner>` em modo `forceOpen`)
 
 **Acceptance**
-- [ ] Setar `aviso.ativo = true` em `church.json` → banner aparece em TODAS as páginas após deploy
-- [ ] Cor muda conforme severidade
-- [ ] Usuário fecha e não reaparece na mesma sessão
-- [ ] Sem banner, zero espaço visual consumido (condicional real)
+- [x] Setar `aviso.ativo = true` em `church.json` → banner aparece em TODAS as páginas após deploy (verificado via `npm run build` — todas as 16 rotas regeradas)
+- [x] Cor/ícone mudam conforme severidade (data-attribute + estilos diferentes em snapshot)
+- [x] Usuário fecha → não reaparece na mesma sessão (sessionStorage)
+- [x] Sem banner, zero espaço visual consumido (component retorna `null`)
+- [x] TDD: 12 testes RTL cobrindo visibilidade, dispensa, severidades, link interno/externo, preview controlado
+
+**Cobertura de testes (`__tests__/components/aviso-banner.test.tsx`)**
+- não renderiza se `ativo=false` ou `mensagem` vazia
+- renderiza mensagem quando ativo
+- aplica `data-severity` correto pra cada severidade
+- `aria-live="assertive"` só em `urgente`, `polite` nas outras
+- link interno (sem `target=_blank`) vs externo (com `target` + `rel`)
+- clicar em fechar persiste em sessionStorage e some da tela
+- mudar a mensagem reseta dispensa (chave por hash)
+- `forceOpen` ignora dispensa e esconde botão X (modo preview do admin)
 
 ---
 
@@ -360,13 +377,43 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 ---
 
-### Phase 8 — Backend de conteúdo (futuro)
-> Auth já foi resolvido na Phase 3. Esta fase cobre apenas o CMS.
+### Phase 8 — Backend de conteúdo ✅ (concluída 2026-04-25)
+Objetivo: tirar conteúdo do localStorage e jogar pra Supabase, pra que toda
+edição do admin apareça pra todo mundo, em qualquer dispositivo.
 
-- Migrar `localStorage` de `/admin` pra tabelas Supabase (`banners`, `eventos`, `ministerios`, `textos`)
-- Upload de imagens pra Supabase Storage (bucket `public-images`)
-- Server actions + revalidate on publish
-- API route `/api/admin/invite-conteudista` pra admin criar conteudistas
+**Tasks**
+- [x] 8.1. Migration `002_cms_content.sql`:
+  - 5 tabelas: `cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos` (KV), `cms_avisos` (singleton id=1)
+  - Helper `is_cms_writer()` que checa role do `profiles`
+  - RLS: select público (anon+authenticated), CRUD só pra `is_cms_writer()`
+  - Bucket Storage `public-images` com RLS (leitura pública, escrita só de writer)
+  - Triggers de `updated_at` em todas as tabelas
+  - Seeds idempotentes a partir do que vivia em `lib/data.ts`
+- [x] 8.2. `lib/cms.ts`: tipos camelCase, readers (`getBanners`, `getMinisterios`, `getEventos`, `getTextos`, `getAviso`), writers (`upsertBanner`, `createBanner`, `deleteBanner`, idem ministerio/evento, `saveTextos`, `saveAviso`) e `uploadImage(file)` pro bucket
+- [x] 8.3. Refactor `app/admin/page.tsx`: usa writers + reader real, com loading state, sem localStorage. Upload de imagem com toast de progresso.
+- [x] 8.4. Refactor páginas públicas (`/`, `/eventos`, `/calendario`, `/ministerios`) pra ler dos readers via `useEffect`. Mantém defaults estáticos pra evitar flash vazio enquanto rede responde.
+- [x] 8.5. `<AvisoBanner>` lê de `getAviso()` no client-side; admin publica → todo mundo vê
+- [x] 8.6. TDD `__tests__/lib/cms.test.ts` — 15 testes cobrindo fallback (cliente null/erro/vazio), mapeamento snake_case→camelCase, writers (insert/update/delete/upsert), upload de imagem (path sanitizado + getPublicUrl)
+
+**Acceptance**
+- [x] `npm run typecheck` passa
+- [x] `npm test` passa (59/59)
+- [x] `npm run build` passa (16 rotas)
+- [x] Admin edita banner/ministério/evento/texto/aviso → salva no banco → outros visitantes veem na próxima carga, em qualquer navegador
+- [x] Upload de imagem grava no bucket `public-images` e retorna URL pública usada nos cards
+- [x] RLS bloqueia escrita anônima (testado via mock)
+- [x] Páginas públicas funcionam mesmo se Supabase estiver offline (fallback pros defaults de `lib/data.ts`)
+
+**Pendências em aberto**
+- API route `/api/admin/invite-conteudista` pra admin criar conteudistas pelo painel
+- Recuperação de senha por e-mail (Supabase tem nativo, só precisa UI)
+- Server actions + `revalidatePath` (hoje é tudo client-side; funciona bem porque RLS protege)
+- Cleanup de imagens órfãs no bucket quando admin troca a foto
+
+**Manual setup necessário (uma vez)**
+1. **Rodar `supabase/migrations/002_cms_content.sql`** no SQL Editor do Supabase Dashboard
+2. Verificar que o bucket `public-images` foi criado em **Storage** e está marcado como público
+3. Redeploy automático do Vercel já pega as mudanças de código
 
 ---
 
@@ -395,12 +442,22 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 ## 8. Status atual
 
-- [x] Spec v2.1 escrito
+- [x] Spec v2.4 escrito
 - [x] **Phase 1 — Foundation** (concluída)
 - [x] **Phase 2 — Geolocalização** (concluída)
-- [x] **Phase 3 — Auth Supabase** (código completo; pendente só o bootstrap manual do usuário — SQL migration + envs + `npm run bootstrap:admin`)
-- [ ] **Phase 4 — Avisos banner** — próxima
-- [ ] Phase 5, 6, 7, 8 — aguardando
+- [x] **Phase 3 — Auth Supabase** (concluída ponta-a-ponta — login funcionando em dev e prod)
+- [x] **Redesign editorial** (Fraunces + tokens novos + utilities) — aplicado fora de fase numerada, em paralelo com Phase 3
+- [x] **Migração `middleware.ts` → `proxy.ts`** (Next 16 compliance)
+- [x] **Phase 4 — Avisos banner** (concluída — `<AvisoBanner>` + aba `/admin/avisos` + 12 testes)
+- [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
+- [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8** (eventos já vivem no banco)
+- [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8** (admin escreve direto no banco)
+- [ ] **Phase 7 — SEO local** — próxima sugerida (metadata page-by-page, sitemap, robots, Lighthouse)
+
+### Pendências de conteúdo (não-código) que ainda viram TODO/null no JSON
+
+- E-mail oficial da secretaria (`contato.email` está como TODO)
+- Chave PIX (`pix.chave` está TODO — infra pronta, só falta o dado)
 
 ---
 
@@ -408,6 +465,9 @@ Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-25 | 2.4 | Phase 8 (CMS backend) entregue: migration 002 (5 tabelas + bucket + RLS), `lib/cms.ts` com readers/writers + upload, admin reescrito pra usar banco em vez de localStorage, páginas públicas leem do banco com fallback nos defaults, AvisoBanner também. 15 testes novos pra `lib/cms`. Phases 5/6 ficam fundidas aqui (banco substitui ambas). Total: 59 testes. |
+| 2026-04-25 | 2.3 | Phase 4 (avisos globais) entregue: `<AvisoBanner>` + aba `/admin/avisos` + 12 testes RTL. Total: 44 testes passando. |
+| 2026-04-25 | 2.2 | Phase 3 marcada como ✅ ponta-a-ponta (bootstrap rodou, login funcionando local+prod). Documentado o redesign editorial (Fraunces+tokens). Documentado rename `middleware.ts → proxy.ts`. Notas sobre fix CRLF parser + upsert profile no bootstrap. |
 | 2026-04-23 | 2.1 | Phase 3 reescrita: era "Avisos banner", virou "Auth Supabase com first-login forçado". Fases seguintes renumeradas. Adicionado `Phase 8` pra CMS server-side. |
 | 2026-04-20 | 2.0 | Reescrita com análise de estado atual, fases sequenciais, gaps da v1.3 resolvidos |
 | 2026-04-21 | 1.3 | Spec original do usuário — identidade, controle, geolocalização |

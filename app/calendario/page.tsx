@@ -11,7 +11,7 @@ import {
   Download,
   Sparkles,
 } from 'lucide-react'
-import { eventos as defaultEventos } from '@/lib/data'
+import { getEventos, type CmsEvento } from '@/lib/cms'
 import { cn } from '@/lib/utils'
 
 const MONTH_NAMES = [
@@ -48,17 +48,7 @@ const CATEGORY_DOT: Record<string, string> = {
   evento: 'bg-destructive',
 }
 
-type EventoLike = (typeof defaultEventos)[number]
-
-function loadCmsEvents(): EventoLike[] {
-  try {
-    const raw = localStorage.getItem('pibac-cms-eventos')
-    if (!raw) return defaultEventos
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) return parsed as EventoLike[]
-  } catch {}
-  return defaultEventos
-}
+type EventoLike = CmsEvento
 
 function sameDay(a: Date, b: Date) {
   return (
@@ -116,13 +106,19 @@ export default function CalendarioPage() {
     return d
   }, [])
 
-  const [eventos, setEventos] = useState<EventoLike[]>(defaultEventos)
+  const [eventos, setEventos] = useState<EventoLike[]>([])
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selected, setSelected] = useState<Date | null>(today)
   const [filter, setFilter] = useState<string>('todos')
 
   useEffect(() => {
-    setEventos(loadCmsEvents())
+    let cancelled = false
+    getEventos().then((rows) => {
+      if (!cancelled) setEventos(rows)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const year = cursor.getFullYear()

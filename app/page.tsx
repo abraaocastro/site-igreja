@@ -9,23 +9,21 @@ import {
 } from 'lucide-react'
 import { BannerCarousel } from '@/components/banner-carousel'
 import { SectionTitle } from '@/components/section-title'
+import { horariosCultos } from '@/lib/data'
 import {
-  heroBanners as defaultHero,
-  ministerios as defaultMinisterios,
-  eventos as defaultEventos,
-  horariosCultos,
-} from '@/lib/data'
+  getBanners,
+  getMinisterios,
+  getEventos,
+  getTextos,
+  DEFAULT_TEXTOS,
+  type CmsBanner,
+  type CmsMinisterio,
+  type CmsEvento,
+  type CmsTextos,
+} from '@/lib/cms'
 import { getChurch, formatAddressOneLine } from '@/lib/site-data'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-function loadCms<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem('pibac-cms-' + key)
-    if (raw) return JSON.parse(raw) as T
-  } catch {}
-  return fallback
-}
 
 // Próximo culto = próximo domingo 19h
 function useNextService() {
@@ -53,23 +51,27 @@ function useNextService() {
 
 export default function Home() {
   const church = getChurch()
-  const [heroBanners, setHeroBanners] = useState(defaultHero)
-  const [ministerios, setMinisterios] = useState(defaultMinisterios)
-  const [eventos, setEventos] = useState(defaultEventos)
-  const [textos, setTextos] = useState({
-    homeTitulo: 'Bem-vindo à Nossa Igreja',
-    homeSubtitulo: 'Somos uma comunidade de fé comprometida em amar a Deus e ao próximo',
-    versiculoDestaque:
-      'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.',
-    versiculoReferencia: 'João 3:16',
-  })
+  // Hidratamos com defaults estáticos pra não ter flash vazio. O useEffect
+  // dispara um fetch contra o Supabase e substitui pelo conteúdo real.
+  const [heroBanners, setHeroBanners] = useState<CmsBanner[]>([])
+  const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
+  const [eventos, setEventos] = useState<CmsEvento[]>([])
+  const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
 
   useEffect(() => {
-    setHeroBanners(loadCms('banners', defaultHero))
-    setMinisterios(loadCms('ministerios', defaultMinisterios))
-    setEventos(loadCms('eventos', defaultEventos))
-    setTextos(loadCms('textos', textos))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let cancelled = false
+    Promise.all([getBanners(), getMinisterios(), getEventos(), getTextos()]).then(
+      ([b, m, e, t]) => {
+        if (cancelled) return
+        setHeroBanners(b)
+        setMinisterios(m)
+        setEventos(e)
+        setTextos(t)
+      }
+    )
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const next = useNextService()
@@ -314,7 +316,7 @@ export default function Home() {
                 <article key={e.id} className="group card-soft overflow-hidden">
                   <div className="relative h-56 overflow-hidden">
                     <div className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-110"
-                         style={{ backgroundImage: `url(${e.imageUrl})` }} />
+                         style={{ backgroundImage: e.imageUrl ? `url(${e.imageUrl})` : undefined }} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                     <div className="absolute top-4 left-4 flex flex-col items-center justify-center h-14 w-14 rounded-2xl bg-surface/95 backdrop-blur text-foreground border border-border">
                       <span className="display text-xl leading-none">{format(parseISO(e.date), 'dd')}</span>

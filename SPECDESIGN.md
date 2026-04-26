@@ -8,8 +8,8 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-04-24 (redesign v2 aplicado — Fraunces + tokens editoriais)
-**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.1
+**Última atualização:** 2026-04-25 (Phase 8 fechada — CMS no Supabase)
+**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.4
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
 
 > **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
@@ -49,13 +49,14 @@ Ao abrir o Claude Design:
 ```
 lib/auth.tsx                        Hook useAuth — API pública estável
 lib/supabase/*.ts                   Clientes Supabase
+lib/cms.ts                          Readers/writers + uploadImage do CMS
 lib/password-strength.ts            evaluatePassword + generatePassphrase
 lib/site-data.ts                    Reader de data/church.json + helpers
-middleware.ts                       Guard de rota
+proxy.ts                            Guard de rota (Next 16; antes era middleware.ts)
 scripts/bootstrap-admin.ts          CLI de bootstrap
 supabase/migrations/*.sql           Schema do banco
 __tests__/                          Testes TDD
-data/church.json                    Dados canônicos (editar via PR/admin)
+data/church.json                    Dados canônicos institucionais (editar via PR)
 ```
 
 ### ✅ Livre para redesenhar
@@ -114,6 +115,32 @@ const church = getChurch()
 // church.nome, church.endereco.bairro, church.contato.whatsapp, etc.
 ```
 
+### `lib/cms.ts` — conteúdo dinâmico (Phase 8)
+```tsx
+import {
+  getBanners, getMinisterios, getEventos, getTextos, getAviso,
+  upsertBanner, createBanner, deleteBanner,
+  upsertMinisterio, createMinisterio, deleteMinisterio,
+  upsertEvento, createEvento, deleteEvento,
+  saveTextos, saveAviso,
+  uploadImage,
+  DEFAULT_TEXTOS,
+  type CmsBanner, type CmsMinisterio, type CmsEvento, type CmsTextos,
+} from '@/lib/cms'
+
+// Reader pattern (page.tsx — client component):
+const [banners, setBanners] = useState<CmsBanner[]>([])
+useEffect(() => { getBanners().then(setBanners) }, [])
+
+// Reader pattern (server component):
+const banners = await getBanners()  // funciona mas não tem cache de revalidate
+
+// Upload pattern:
+const url = await uploadImage(file)  // <input type="file" />
+```
+
+Readers caem em **defaults estáticos** se DB estiver offline ou tabela vazia (página nunca quebra). Writers exigem login com role `admin` ou `conteudista` — RLS bloqueia anon.
+
 ### `evaluatePassword()` / `generatePassphrase()` — força de senha
 ```tsx
 import { evaluatePassword, generatePassphrase } from '@/lib/password-strength'
@@ -132,20 +159,22 @@ const generated = generatePassphrase()
 
 | Rota | Arquivo | Status do design | Precisa do Claude Design? |
 |---|---|---|---|
-| `/` | `app/page.tsx` | ✅ Pronto | — |
-| `/quem-somos` | `app/quem-somos/page.tsx` | ✅ Pronto | — |
-| `/historia` | `app/historia/page.tsx` | ✅ Pronto | — |
-| `/visao` | `app/visao/page.tsx` | ✅ Pronto | — |
-| `/pastor` | `app/pastor/page.tsx` | ✅ Pronto | — |
-| `/ministerios` | `app/ministerios/page.tsx` | ✅ Pronto | — |
-| `/eventos` | `app/eventos/page.tsx` | ✅ Pronto | — |
-| `/calendario` | `app/calendario/page.tsx` | ✅ Pronto | — |
-| `/plano-leitura` | `app/plano-leitura/page.tsx` | ✅ Pronto | — |
-| `/contribua` | `app/contribua/page.tsx` | ✅ Pronto | — |
-| `/contato` | `app/contato/page.tsx` | ✅ Pronto | — |
-| `/login` | `app/login/page.tsx` | ✅ Pronto | — |
-| `/admin` | `app/admin/page.tsx` | ✅ Pronto | — |
+| `/` | `app/page.tsx` | ✅ Redesign v2 (editorial) | — |
+| `/quem-somos` | `app/quem-somos/page.tsx` | ⚠️ Design v1 (não recebeu o redesign de 04-24) | Opcional — alinhar com novos tokens |
+| `/historia` | `app/historia/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/visao` | `app/visao/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/pastor` | `app/pastor/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/ministerios` | `app/ministerios/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/eventos` | `app/eventos/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/calendario` | `app/calendario/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/plano-leitura` | `app/plano-leitura/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/contribua` | `app/contribua/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/contato` | `app/contato/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/login` | `app/login/page.tsx` | ⚠️ Design v1 | Opcional |
+| `/admin` | `app/admin/page.tsx` | ⚠️ Design v1 | Opcional |
 | **`/admin/primeiro-acesso`** | `app/admin/primeiro-acesso/page.tsx` | ⚠️ **Funcional mas básico** | ✳️ **SIM** — ver §4.1 |
+
+> **Nota:** o redesign de 2026-04-24 cobriu `/`, header, footer, banner-carousel e section-title. As páginas internas continuam no estilo v1 (mais formal, com Merriweather+SectionTitle decorativo). Como elas usam `<SectionTitle>` e `<Header>/<Footer>` já redesenhados, a estética está **consistente o suficiente**, só não foi reformulada editorialmente. Aplicar o redesign nas internas é trabalho de Phase futura ou pedido específico ao Claude Design.
 
 ### Componentes
 
@@ -156,7 +185,7 @@ const generated = generatePassphrase()
 | Banner carousel | `components/banner-carousel.tsx` | ✅ Pronto | — |
 | Section title | `components/section-title.tsx` | ✅ Pronto | — |
 | **Password strength** | `components/password-strength.tsx` | ⚠️ **Funcional mas básico** | ✳️ **SIM** — ver §4.2 |
-| **Aviso banner** | _não existe ainda_ | ⬜ Phase 4 | ✳️ **SIM** — ver §4.3 |
+| Aviso banner | `components/aviso-banner.tsx` | ✅ Funcional (Phase 4) | Polish opcional — base usa tokens existentes |
 
 ---
 
@@ -254,9 +283,14 @@ role="progressbar" aria-valuenow=...
 
 ---
 
-### 4.3. `<AvisoBanner>` — banner global de avisos (Phase 4)
+### 4.3. `<AvisoBanner>` — banner global de avisos (Phase 4 — ✅ entregue 2026-04-25)
 
-**Status:** componente ainda não existe. Backend já tem os dados em `data/church.json`:
+**Status:** componente funcional implementado (`components/aviso-banner.tsx`)
++ aba "Avisos" no `/admin` com toggle/severidade/preview ao vivo. 12 testes
+RTL cobrindo visibilidade, dispensa, severidades, link interno/externo.
+Polish visual é opcional — a base usa apenas tokens já existentes.
+
+Schema dos dados em `data/church.json`:
 
 ```ts
 church.aviso = {
@@ -268,20 +302,34 @@ church.aviso = {
 }
 ```
 
-**Comportamento funcional (a ser implementado junto com o design):**
-- Renderiza APENAS se `aviso.ativo === true`
+**Comportamento funcional (já implementado):**
+- Renderiza APENAS se `aviso.ativo === true` E `mensagem.trim() !== ''`
 - Injetado em `app/layout.tsx` acima do `<Header>`
-- Botão X pra fechar → persiste em `sessionStorage` (volta na próxima sessão)
-- Sem banner ativo = zero espaço visual consumido
+- Botão X pra fechar → persiste em `sessionStorage`. **A chave inclui hash da mensagem**, então mudar o texto faz o banner reaparecer mesmo pra quem dispensou a versão anterior.
+- Sem banner ativo = retorna `null` (zero espaço visual)
+- Override pra preview do admin: `localStorage['pibac-cms-aviso']` sobrepõe o JSON. Component também aceita prop `aviso={...}` ad-hoc + `forceOpen` (desabilita dispensa, esconde X — usado no preview do `/admin`).
 
-**Requisitos visuais pedidos:**
-- Três variantes de cor/ícone por severidade:
-  - `info` — azul calmo (`bg-accent/10`, ícone Info)
-  - `atencao` — amarelo/âmbar (ícone AlertTriangle)
-  - `urgente` — vermelho (`bg-destructive/10`, ícone AlertOctagon)
-- Sticky no topo? Ou inline? (decisão do design)
-- Responsive — texto pode ser longo; ellipsis + link "ler mais" no mobile
-- Animação fade-in sutil ao aparecer
+**Variantes visuais já implementadas (tokens):**
+- `info` — `bg-accent/10` + ícone `<Info>` cor `text-accent`
+- `atencao` — `bg-yellow-50` + borda `border-yellow-300` + ícone `<AlertTriangle>` (versão dark inclusa)
+- `urgente` — `bg-destructive/10` + ícone `<AlertOctagon>` cor `text-destructive`. Recebe `aria-live="assertive"` (leitor de tela interrompe); demais usam `polite`.
+
+**Test IDs (estáveis — testes RTL dependem):**
+```
+data-testid="aviso-banner"     data-severity="info|atencao|urgente"
+data-testid="aviso-message"
+data-testid="aviso-link"       (só quando `link` presente)
+data-testid="aviso-dismiss"    (só quando NÃO `forceOpen`)
+role="status" aria-live="polite|assertive"
+```
+
+**Polish opcional (Claude Design pode mexer):**
+- Animação fade-in já tá com `animate-fade-in` do globals.css; pode trocar
+- Sticky vs inline: hoje é inline (rola junto com a página). Sticky exige
+  posicionar acima do `<Header>` que já é sticky — combinar antes de mexer
+- Responsive em mobile: texto pode quebrar em várias linhas; se preferir
+  truncar com `line-clamp` + "ler mais", abrir issue
+- Ícone alternativo: hoje usa lucide-react; manter por consistência
 
 ---
 
@@ -429,8 +477,8 @@ Conforme as fases avançam, o backend vai abrir tickets aqui com o que precisa d
 
 | Fase | UI nova prevista | Status |
 |---|---|---|
-| 3 | `/admin/primeiro-acesso`, `<PasswordStrength>` | **Aberto — §4.1, §4.2** |
-| 4 | `<AvisoBanner>`, aba "Avisos" em `/admin` | Aberto — §4.3 (stub) |
+| 3 | `/admin/primeiro-acesso`, `<PasswordStrength>` | **Aberto — §4.1, §4.2** (funcionais; polish opcional) |
+| 4 | `<AvisoBanner>`, aba "Avisos" em `/admin` | ✅ **Entregue 2026-04-25** — funcional, polish opcional (§4.3) |
 | 5 | Calendário refatorado, lista de eventos, cards de ministérios | Pendente |
 | 6 | Aba "Igreja" + "Pastor" em `/admin` (forms) | Pendente |
 | 7 | Nada de UI — só SEO (metadata, sitemap, robots) | — |

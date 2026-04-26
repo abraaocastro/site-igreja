@@ -9,10 +9,10 @@ import { ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react'
 interface Banner {
   id: string
   title: string
-  subtitle?: string
+  subtitle?: string | null
   imageUrl: string
-  link?: string
-  buttonText?: string
+  link?: string | null
+  buttonText?: string | null
 }
 
 interface BannerCarouselProps {
