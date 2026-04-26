@@ -17,6 +17,41 @@
 
 ---
 
+## 🎯 Próximos passos (atualizado 2026-04-25)
+
+### 🔴 Bloqueio pra "site 100% pronto pro mundo"
+1. **Validar o CMS em produção** (o stakeholder, agora) — entrar em `/admin`, criar 1 banner novo, fazer upload de uma foto real, ver aparecer no site público em outro navegador. Se algo falhar (RLS, upload, etc), me avise e eu corrijo.
+2. **Preencher conteúdo TODO via /admin** (admin pode fazer agora, sem dev):
+   - Trocar fotos Unsplash dos ministérios por fotos reais
+   - Trocar fotos Unsplash dos eventos por fotos reais
+   - Banners da home com fotos da igreja
+3. **E-mail oficial da igreja** — ainda `TODO` em `data/church.json#contato.email`. Enquanto não preencher, o card de e-mail no `/contato` some.
+4. **Chave PIX** — ainda `TODO` em `data/church.json#pix.chave`. Enquanto não preencher, `/contribua` mostra "em configuração".
+
+> Itens 3 e 4 vivem em `data/church.json` (não no banco) porque são dados **canônicos institucionais**. Pra mudar, comita o JSON e push. Em uma fase futura podemos mover pro banco também.
+
+### 🟡 Phase 7 — SEO local (próxima fase técnica)
+
+Tudo **acrescenta**, sem reescrever nada do que já existe:
+- `metadata` por página (title, description, Open Graph, Twitter Card) — atualmente só `app/layout.tsx` tem genérico
+- `app/sitemap.ts` dinâmico (lê `data/church.json` + rotas estáticas)
+- `app/robots.ts` (bloquear `/admin` e `/login` da indexação)
+- Auditoria Lighthouse + correções de acessibilidade (alt text, contraste, labels)
+- Submeter sitemap no Google Search Console (ação manual do stakeholder)
+
+Estimativa: 1-2 sessões. Sem dependência de stakeholder além do Search Console no fim.
+
+### 🟢 Resíduos da Phase 8 (não bloqueantes — fazer quando precisar)
+- API route `/api/admin/invite-conteudista` pra admin convidar conteudistas pelo painel (hoje precisa rodar `bootstrap-admin` ou criar via Supabase Dashboard)
+- UI de recuperação de senha por e-mail (Supabase tem nativo, falta tela)
+- Server actions + `revalidatePath` (hoje é client-side; funciona, mas perde benefícios de SSR)
+- Cleanup de imagens órfãs no bucket quando admin troca a foto
+
+### 🔵 Design v1 → v2 nas páginas internas
+Páginas que ainda usam o design "v1" (não receberam o redesign Fraunces de 2026-04-24): `/quem-somos`, `/historia`, `/visao`, `/pastor`, `/ministerios`, `/eventos`, `/calendario`, `/plano-leitura`, `/contribua`, `/contato`, `/login`, `/admin`. Header/Footer/SectionTitle já redesenhados, então a estética está consistente o suficiente; aplicar o redesign editorial nelas é trabalho do Claude Design quando houver tempo.
+
+---
+
 ## 0. Como usar este doc
 
 Em sessões futuras, quando você (usuário) escrever algo como:
@@ -65,8 +100,7 @@ o agente deve:
 | `c9b5c54` | feat(admin): senha padrão fixa + reset idempotente no bootstrap | `DEFAULT_ADMIN_PASSWORD = 'PibacAdmin@2026'`; rodar de novo reseta a senha + reativa must_change_password |
 | `480cd11` | fix(bootstrap): parser de CRLF + upsert no profile | Tira `\r` antes do regex (`.env.local` salvo no Windows); troca `update` por `upsert` em `profiles` (cobre user criado antes da trigger existir) |
 | `9a74ef5` | chore(next16): renomeia middleware.ts → proxy.ts | Convenção nova do Next 16 (mesmo runtime, só nome novo do arquivo + da função exportada) |
-| _pending_ | feat(phase-4): banner global de avisos + admin UI + TDD | `<AvisoBanner>` (3 severidades, dispense por sessionStorage com chave por hash da mensagem), injetado em `app/layout.tsx`, aba "Avisos" em `/admin` com toggle/severidade/preview ao vivo, 12 testes RTL (44 totais agora) |
-| _pending_ | feat(phase-8): CMS backend no Supabase | Migration 002 com 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos`, `cms_avisos`) + helper `is_cms_writer()` + RLS (público lê, writer escreve) + bucket `public-images` + seeds. `lib/cms.ts` com readers/writers + `uploadImage`. Admin reescrito pra usar banco. Páginas públicas (home, eventos, calendario, ministerios) e AvisoBanner refatorados pra ler do banco com fallback nos defaults estáticos. 15 testes novos (59 totais). |
+| `f289bd7` | feat(phase-4+8): avisos globais + CMS no Supabase | **Phase 4** — `<AvisoBanner>` (3 severidades, dispense via sessionStorage com chave por hash da mensagem, prop `forceOpen` pra preview), injetado em `app/layout.tsx` acima do `<Header>`, 12 testes RTL. **Phase 8** — migration 002 com 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos`, `cms_avisos`) + helper `is_cms_writer()` + RLS (público lê, writer escreve) + bucket `public-images` + seeds idempotentes. `lib/cms.ts` com readers/writers + `uploadImage`. Admin reescrito pra usar banco. Páginas públicas e AvisoBanner refatorados pra ler do banco com fallback nos defaults. **15 testes novos (59 totais).** Migration rodada manualmente no Supabase em 2026-04-25. |
 
 ---
 
@@ -269,11 +303,11 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | 3 | Auth real com Supabase + TDD + primeiro-acesso forçado | ✅ Completa (login funcionando local+prod) | `f471f14` + `c9b5c54` + `480cd11` |
 | ~ | Redesign editorial (fora de fase numerada) | ✅ Aplicado | `8ba0706` |
 | ~ | Migração `middleware.ts → proxy.ts` (Next 16) | ✅ Aplicada | `9a74ef5` |
-| 4 | Avisos globais (banner toggleável com severidade) | ✅ Completa | _pending commit_ |
+| 4 | Avisos globais (banner toggleável com severidade) | ✅ Completa | `f289bd7` |
 | 5 | ~~Programação (eventos + horários consolidados)~~ | ☑️ **Fundida em Phase 8** (eventos vivem no banco) | — |
 | 6 | ~~Admin UI pra editar JSON~~ | ☑️ **Fundida em Phase 8** (admin escreve direto no banco) | — |
 | **7** | **SEO completo (sitemap, robots, OG, rich results)** | ⏭️ **Próxima sugerida** — base JSON-LD já entregue | — |
-| 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | _pending commit_ |
+| 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
 
 ---
 

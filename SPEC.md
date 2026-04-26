@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
 **Versão:** 2.4 (2026-04-25)
-**Status:** Em execução — Phases 1–4 ✅ + **Phase 8** ✅ concluídas. Auth + CMS Supabase em produção. Phases 5/6 ficam **fundidas em 8** (eventos/ministérios/banners/textos/avisos já vivem no banco). **Próximo:** Phase 7 (SEO).
+**Status:** Em execução — Phases 1–4 ✅ + **Phase 8** ✅ concluídas e em produção (commit `f289bd7`). Auth + CMS Supabase ativos. Phases 5/6 ficam **fundidas em 8** (eventos/ministérios/banners/textos/avisos já vivem no banco). **Próximo:** Phase 7 (SEO).
 **Substitui:** v2.3 de 25/04/2026
 
 ---
