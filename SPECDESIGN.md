@@ -8,8 +8,8 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-04-25 (Phase 8 fechada — CMS no Supabase)
-**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.4
+**Última atualização:** 2026-04-25 (Phase 9 fechada — admin com cobertura total)
+**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.5
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
 
 > **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
@@ -115,9 +115,10 @@ const church = getChurch()
 // church.nome, church.endereco.bairro, church.contato.whatsapp, etc.
 ```
 
-### `lib/cms.ts` — conteúdo dinâmico (Phase 8)
+### `lib/cms.ts` — conteúdo dinâmico (Phases 8 + 9)
 ```tsx
 import {
+  // Phase 8
   getBanners, getMinisterios, getEventos, getTextos, getAviso,
   upsertBanner, createBanner, deleteBanner,
   upsertMinisterio, createMinisterio, deleteMinisterio,
@@ -126,20 +127,31 @@ import {
   uploadImage,
   DEFAULT_TEXTOS,
   type CmsBanner, type CmsMinisterio, type CmsEvento, type CmsTextos,
+  // Phase 9
+  getHistoria, createHistoria, upsertHistoria, deleteHistoria,
+  getChurchEffective,
+  CHURCH_TEXTOS_KEYS,
+  type CmsHistoriaEntry,
 } from '@/lib/cms'
 
 // Reader pattern (page.tsx — client component):
 const [banners, setBanners] = useState<CmsBanner[]>([])
 useEffect(() => { getBanners().then(setBanners) }, [])
 
-// Reader pattern (server component):
-const banners = await getBanners()  // funciona mas não tem cache de revalidate
+// Church efetivo — defaults do JSON com overrides do KV cms_textos:
+const [church, setChurch] = useState(() => getChurch())  // sync default
+useEffect(() => { getChurchEffective().then(setChurch) }, [])
 
 // Upload pattern:
 const url = await uploadImage(file)  // <input type="file" />
 ```
 
 Readers caem em **defaults estáticos** se DB estiver offline ou tabela vazia (página nunca quebra). Writers exigem login com role `admin` ou `conteudista` — RLS bloqueia anon.
+
+`getChurchEffective()` retorna o `Church` completo já mesclado: defaults do
+`data/church.json` com qualquer override que o admin tenha gravado em
+`cms_textos`. Use em `/contato`, `/pastor`, `/contribua`, footer — qualquer
+lugar que precise dos dados institucionais editáveis pelo admin.
 
 ### `evaluatePassword()` / `generatePassphrase()` — força de senha
 ```tsx

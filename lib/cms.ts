@@ -22,7 +22,13 @@ import {
   ministerios as defaultMinisterios,
   eventos as defaultEventos,
 } from '@/lib/data'
-import type { ChurchAviso, AvisoSeveridade } from '@/lib/site-data'
+import {
+  getChurch as getChurchStatic,
+  type Church,
+  type ChurchAviso,
+  type AvisoSeveridade,
+  type PixTipo,
+} from '@/lib/site-data'
 
 // ============================================================
 // Tipos públicos (camelCase, usados no app)
@@ -57,6 +63,15 @@ export interface CmsEvento {
   location: string
   category: string
   imageUrl: string | null
+}
+
+export interface CmsHistoriaEntry {
+  id: string
+  year: string
+  title: string
+  description: string
+  imageUrl: string | null
+  sortOrder: number
 }
 
 export type CmsTextos = Record<string, string>
@@ -166,6 +181,30 @@ const eventoToRow = (e: Partial<CmsEvento>): Partial<EventoRow> => ({
   ...(e.imageUrl !== undefined && { image_url: e.imageUrl }),
 })
 
+interface HistoriaRow {
+  id: string
+  year: string
+  title: string
+  description: string
+  image_url: string | null
+  sort_order: number
+}
+const historiaFromRow = (r: HistoriaRow): CmsHistoriaEntry => ({
+  id: r.id,
+  year: r.year,
+  title: r.title,
+  description: r.description,
+  imageUrl: r.image_url,
+  sortOrder: r.sort_order,
+})
+const historiaToRow = (h: Partial<CmsHistoriaEntry>): Partial<HistoriaRow> => ({
+  ...(h.year !== undefined && { year: h.year }),
+  ...(h.title !== undefined && { title: h.title }),
+  ...(h.description !== undefined && { description: h.description }),
+  ...(h.imageUrl !== undefined && { image_url: h.imageUrl }),
+  ...(h.sortOrder !== undefined && { sort_order: h.sortOrder }),
+})
+
 interface AvisoRow {
   id: number
   ativo: boolean
@@ -205,6 +244,18 @@ const DEFAULT_MINISTERIOS: CmsMinisterio[] = defaultMinisterios.map((m, i) => ({
   leaderInstagram: m.leaderInstagram,
   sortOrder: i,
 }))
+
+// Defaults da timeline /historia — derivados do que vivia em app/historia/page.tsx.
+const DEFAULT_HISTORIA: CmsHistoriaEntry[] = [
+  { year: '1970', title: 'A Semente é Plantada', description: 'Um pequeno grupo de famílias começou a se reunir em uma casa para estudar a Bíblia e orar. A semente do Evangelho foi plantada em Capim Grosso.', imageUrl: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=600&q=80', sortOrder: 0 },
+  { year: '1972', title: 'Organização da Igreja', description: 'Com o crescimento do grupo, a igreja foi oficialmente organizada como Primeira Igreja Batista de Capim Grosso, filiada à Convenção Batista Brasileira.', imageUrl: 'https://images.unsplash.com/photo-1507692049790-de58290a4334?w=600&q=80', sortOrder: 1 },
+  { year: '1980', title: 'Construção do Templo', description: 'Através de muito esforço e dedicação dos membros, foi construído o primeiro templo da igreja, um marco na história da congregação.', imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=600&q=80', sortOrder: 2 },
+  { year: '1995', title: 'Expansão dos Ministérios', description: 'A igreja expandiu seus ministérios, criando trabalhos específicos para jovens, crianças, mulheres e homens, fortalecendo a comunidade.', imageUrl: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&q=80', sortOrder: 3 },
+  { year: '2005', title: 'Ampliação do Templo', description: 'Com o crescimento contínuo, o templo foi ampliado para acomodar mais pessoas e criar novos espaços para atividades da igreja.', imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&q=80', sortOrder: 4 },
+  { year: '2015', title: 'Centro de Educação Cristã', description: 'Foi inaugurado o Centro de Educação Cristã, oferecendo espaço para Escola Bíblica Dominical e treinamento de líderes.', imageUrl: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600&q=80', sortOrder: 5 },
+  { year: '2020', title: 'Igreja Online', description: 'Durante a pandemia, a igreja se adaptou e começou a transmitir cultos online, alcançando pessoas além das fronteiras da cidade.', imageUrl: 'https://images.unsplash.com/photo-1609234656388-0ff363383899?w=600&q=80', sortOrder: 6 },
+  { year: 'Hoje', title: 'Continuando a Missão', description: 'Hoje, a PIB Capim Grosso continua firme em sua missão, com centenas de membros, diversos ministérios ativos e projetos sociais na comunidade.', imageUrl: 'https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?w=600&q=80', sortOrder: 7 },
+].map((h, i) => ({ ...h, id: `default-${i}` }))
 
 const DEFAULT_EVENTOS: CmsEvento[] = defaultEventos.map((e) => ({
   id: e.id,
@@ -293,6 +344,124 @@ export async function getAviso(): Promise<ChurchAviso> {
     if (error || !data) return DEFAULT_AVISO
     return avisoFromRow(data as AvisoRow)
   }, DEFAULT_AVISO)
+}
+
+export async function getHistoria(): Promise<CmsHistoriaEntry[]> {
+  return safeRead(async (sb) => {
+    const { data, error } = await sb
+      .from('cms_historia')
+      .select('id,year,title,description,image_url,sort_order')
+      .order('sort_order', { ascending: true })
+    if (error || !data || data.length === 0) return DEFAULT_HISTORIA
+    return data.map(historiaFromRow)
+  }, DEFAULT_HISTORIA)
+}
+
+// ============================================================
+// CHURCH (textos KV overrides em cima de data/church.json)
+// ============================================================
+//
+// Phase 9: o admin pode editar endereço/contato/socials/pastor/pix sem
+// commitar JSON. As chaves vivem em `cms_textos` (KV) e fazem override
+// dos valores estáticos. Quando o valor no banco é vazio/ausente, cai
+// pro default em data/church.json.
+
+/**
+ * Lista de chaves do `cms_textos` que mapeiam pra campos da Igreja.
+ * Usada pelo admin pra renderizar os formulários "Igreja" e "Pastor".
+ */
+export const CHURCH_TEXTOS_KEYS = {
+  igreja: ['igrejaNome', 'igrejaNomeCurto', 'igrejaSlogan'] as const,
+  endereco: ['enderecoRua', 'enderecoNumero', 'enderecoBairro', 'enderecoCidade', 'enderecoEstado', 'enderecoCep'] as const,
+  contato: ['contatoTelefone', 'contatoWhatsapp', 'contatoEmail'] as const,
+  social: ['socialInstagram', 'socialInstagramPastor', 'socialInstagramJovens', 'socialFacebook', 'socialYoutube'] as const,
+  pastor: ['pastorNome', 'pastorTitulo', 'pastorBio', 'pastorFoto', 'pastorInstagram'] as const,
+  pix: ['pixChave', 'pixTipo', 'pixTitular'] as const,
+  historia: ['historiaIntroTitulo', 'historiaIntroSubtitulo', 'historiaIntroTexto', 'historiaCitacao', 'historiaCitacaoRef', 'historiaCitacaoTexto'] as const,
+} as const
+
+type AnyTextoKey =
+  | (typeof CHURCH_TEXTOS_KEYS.igreja)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.endereco)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.contato)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.social)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.pastor)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.pix)[number]
+  | (typeof CHURCH_TEXTOS_KEYS.historia)[number]
+
+/**
+ * Helper interno: pega o valor da chave OU o fallback se a chave estiver
+ * vazia/ausente. Trata `'null'` (string literal) como ausência.
+ */
+function pick(textos: CmsTextos, key: AnyTextoKey, fallback: string): string {
+  const v = textos[key]
+  if (v === undefined || v === null) return fallback
+  const trimmed = String(v).trim()
+  if (trimmed === '' || trimmed.toLowerCase() === 'null') return fallback
+  return trimmed
+}
+function pickNullable(textos: CmsTextos, key: AnyTextoKey, fallback: string | null): string | null {
+  const v = textos[key]
+  if (v === undefined || v === null) return fallback
+  const trimmed = String(v).trim()
+  if (trimmed === '' || trimmed.toLowerCase() === 'null') return null
+  return trimmed
+}
+
+/**
+ * Retorna o `Church` efetivo: defaults de `data/church.json` com qualquer
+ * override que o admin tenha gravado em `cms_textos`. Não toca `aviso` —
+ * isso vive em `cms_avisos` (use `getAviso()` separadamente).
+ *
+ * Use em páginas client: `useEffect(() => getChurchEffective().then(set))`.
+ */
+export async function getChurchEffective(): Promise<Church> {
+  const base = getChurchStatic()
+  const textos = await getTextos()
+
+  const bioRaw = textos['pastorBio']
+  const bio = bioRaw && bioRaw.trim()
+    ? bioRaw.split(/\n{2,}|\r\n{2}/).map((p) => p.trim()).filter(Boolean)
+    : base.pastor.bio
+
+  return {
+    nome:      pick(textos, 'igrejaNome',      base.nome),
+    nomeCurto: pick(textos, 'igrejaNomeCurto', base.nomeCurto),
+    slogan:    pick(textos, 'igrejaSlogan',    base.slogan),
+    endereco: {
+      rua:     pick(textos, 'enderecoRua',     base.endereco.rua),
+      numero:  pick(textos, 'enderecoNumero',  base.endereco.numero),
+      bairro:  pick(textos, 'enderecoBairro',  base.endereco.bairro),
+      cidade:  pick(textos, 'enderecoCidade',  base.endereco.cidade),
+      estado:  pick(textos, 'enderecoEstado',  base.endereco.estado),
+      cep:     pick(textos, 'enderecoCep',     base.endereco.cep),
+    },
+    contato: {
+      telefone: pickNullable(textos, 'contatoTelefone', base.contato.telefone),
+      whatsapp: pickNullable(textos, 'contatoWhatsapp', base.contato.whatsapp),
+      email:    pickNullable(textos, 'contatoEmail',    base.contato.email),
+    },
+    social: {
+      instagram:        pick(textos, 'socialInstagram',        base.social.instagram),
+      instagramPastor:  pick(textos, 'socialInstagramPastor',  base.social.instagramPastor),
+      instagramJovens:  pick(textos, 'socialInstagramJovens',  base.social.instagramJovens),
+      facebook:         pickNullable(textos, 'socialFacebook', base.social.facebook),
+      youtube:          pickNullable(textos, 'socialYoutube',  base.social.youtube),
+    },
+    pastor: {
+      nome:      pick(textos, 'pastorNome',      base.pastor.nome),
+      titulo:    pick(textos, 'pastorTitulo',    base.pastor.titulo),
+      bio,
+      foto:      pick(textos, 'pastorFoto',      base.pastor.foto),
+      instagram: pickNullable(textos, 'pastorInstagram', base.pastor.instagram),
+    },
+    pix: {
+      chave:   pick(textos, 'pixChave',   base.pix.chave),
+      tipo:    (pick(textos, 'pixTipo', base.pix.tipo) as PixTipo),
+      titular: pick(textos, 'pixTitular', base.pix.titular),
+    },
+    aviso: base.aviso,
+  }
 }
 
 // ============================================================
@@ -462,6 +631,49 @@ export async function saveAviso(aviso: ChurchAviso): Promise<void> {
     },
     { onConflict: 'id' }
   )
+  if (error) throw error
+}
+
+// ---------- Historia (Phase 9) ----------
+
+export async function createHistoria(h: Omit<CmsHistoriaEntry, 'id'>): Promise<CmsHistoriaEntry> {
+  const sb = writerClient()
+  const { data, error } = await sb
+    .from('cms_historia')
+    .insert(historiaToRow(h))
+    .select('id,year,title,description,image_url,sort_order')
+    .single()
+  if (error) throw error
+  return historiaFromRow(data as HistoriaRow)
+}
+
+export async function upsertHistoria(h: CmsHistoriaEntry): Promise<CmsHistoriaEntry> {
+  const sb = writerClient()
+  const isDefault = !/^[0-9a-f-]{36}$/i.test(h.id)
+  const payload = historiaToRow(h)
+  if (isDefault) {
+    const { data, error } = await sb
+      .from('cms_historia')
+      .insert(payload)
+      .select('id,year,title,description,image_url,sort_order')
+      .single()
+    if (error) throw error
+    return historiaFromRow(data as HistoriaRow)
+  } else {
+    const { data, error } = await sb
+      .from('cms_historia')
+      .update(payload)
+      .eq('id', h.id)
+      .select('id,year,title,description,image_url,sort_order')
+      .single()
+    if (error) throw error
+    return historiaFromRow(data as HistoriaRow)
+  }
+}
+
+export async function deleteHistoria(id: string): Promise<void> {
+  const sb = writerClient()
+  const { error } = await sb.from('cms_historia').delete().eq('id', id)
   if (error) throw error
 }
 

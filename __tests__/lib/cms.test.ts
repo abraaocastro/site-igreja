@@ -121,11 +121,16 @@ import {
   getEventos,
   getAviso,
   getTextos,
+  getHistoria,
+  getChurchEffective,
   saveAviso,
   saveTextos,
   uploadImage,
   createBanner,
   deleteBanner,
+  createHistoria,
+  upsertHistoria,
+  deleteHistoria,
 } from '@/lib/cms'
 
 beforeEach(() => {
@@ -375,5 +380,185 @@ describe('uploadImage', () => {
     mockStorageUpload.mockResolvedValue({ data: null, error: { message: 'quota' } })
     const file = new File(['x'], 'x.png', { type: 'image/png' })
     await expect(uploadImage(file)).rejects.toMatchObject({ message: 'quota' })
+  })
+})
+
+// ============================================================
+// HISTORIA — readers + writers (Phase 9)
+// ============================================================
+
+describe('cms historia', () => {
+  it('getHistoria cai pro default se tabela vazia', async () => {
+    queueResult({ data: [], error: null })
+    const result = await getHistoria()
+    expect(result.length).toBeGreaterThan(0)
+    expect(result[0].year).toBe('1970')
+  })
+
+  it('getHistoria traduz snake_case → camelCase + ordena por sort_order', async () => {
+    queueResult({
+      data: [
+        {
+          id: 'h-1',
+          year: '1972',
+          title: 'Marco 1',
+          description: 'Descrição',
+          image_url: 'https://img.test/h.jpg',
+          sort_order: 0,
+        },
+      ],
+      error: null,
+    })
+    const result = await getHistoria()
+    expect(result).toEqual([
+      {
+        id: 'h-1',
+        year: '1972',
+        title: 'Marco 1',
+        description: 'Descrição',
+        imageUrl: 'https://img.test/h.jpg',
+        sortOrder: 0,
+      },
+    ])
+    expect(lastBuilder.order?.column).toBe('sort_order')
+  })
+
+  it('createHistoria converte camelCase pra snake_case no insert', async () => {
+    queueResult({
+      data: {
+        id: 'new-h',
+        year: '2020',
+        title: 'Novo',
+        description: '',
+        image_url: null,
+        sort_order: 5,
+      },
+      error: null,
+    })
+    const out = await createHistoria({
+      year: '2020',
+      title: 'Novo',
+      description: '',
+      imageUrl: null,
+      sortOrder: 5,
+    })
+    expect(lastBuilder.insert).toMatchObject({
+      year: '2020',
+      title: 'Novo',
+      sort_order: 5,
+    })
+    expect(out.id).toBe('new-h')
+  })
+
+  it('upsertHistoria com id default usa insert (porque seed não tem UUID válido)', async () => {
+    queueResult({
+      data: { id: 'real-uuid', year: '2020', title: 'X', description: '', image_url: null, sort_order: 0 },
+      error: null,
+    })
+    await upsertHistoria({
+      id: 'default-3',
+      year: '2020',
+      title: 'X',
+      description: '',
+      imageUrl: null,
+      sortOrder: 0,
+    })
+    expect(lastBuilder.insert).toBeDefined()
+    expect(lastBuilder.update).toBeUndefined()
+  })
+
+  it('upsertHistoria com UUID válido usa update', async () => {
+    queueResult({
+      data: {
+        id: '11111111-2222-3333-4444-555555555555',
+        year: '2020',
+        title: 'X',
+        description: '',
+        image_url: null,
+        sort_order: 0,
+      },
+      error: null,
+    })
+    await upsertHistoria({
+      id: '11111111-2222-3333-4444-555555555555',
+      year: '2020',
+      title: 'X',
+      description: '',
+      imageUrl: null,
+      sortOrder: 0,
+    })
+    expect(lastBuilder.update).toBeDefined()
+    expect(lastBuilder.insert).toBeUndefined()
+    expect(lastBuilder.eqFilters).toContainEqual([
+      'id',
+      '11111111-2222-3333-4444-555555555555',
+    ])
+  })
+
+  it('deleteHistoria chama delete().eq(id, ...)', async () => {
+    queueResult({ data: null, error: null })
+    await deleteHistoria('abc-123')
+    expect(lastBuilder.delete).toBe(true)
+    expect(lastBuilder.eqFilters).toContainEqual(['id', 'abc-123'])
+  })
+})
+
+// ============================================================
+// CHURCH EFFECTIVE — merger de cms_textos sobre data/church.json
+// ============================================================
+
+describe('getChurchEffective', () => {
+  it('retorna defaults do JSON quando textos KV está vazio', async () => {
+    queueResult({ data: [], error: null }) // cms_textos vazio
+    const c = await getChurchEffective()
+    // Vem do data/church.json (depende dos dados reais, mas algumas
+    // afirmações são estáveis):
+    expect(c.nome).toBeTruthy()
+    expect(c.endereco.cidade).toBeTruthy()
+    expect(c.pastor.nome).toBeTruthy()
+    expect(Array.isArray(c.pastor.bio)).toBe(true)
+  })
+
+  it('aplica overrides do KV em cima dos defaults', async () => {
+    queueResult({
+      data: [
+        { key: 'igrejaNome', value: 'Igreja Teste Sobrescrita' },
+        { key: 'pastorNome', value: 'João Custom' },
+        { key: 'pastorBio', value: 'Parágrafo um.\n\nParágrafo dois.' },
+        { key: 'enderecoCidade', value: 'Cidade Nova' },
+      ],
+      error: null,
+    })
+    const c = await getChurchEffective()
+    expect(c.nome).toBe('Igreja Teste Sobrescrita')
+    expect(c.pastor.nome).toBe('João Custom')
+    expect(c.pastor.bio).toEqual(['Parágrafo um.', 'Parágrafo dois.'])
+    expect(c.endereco.cidade).toBe('Cidade Nova')
+  })
+
+  it('valor vazio cai pro default (não substitui)', async () => {
+    queueResult({
+      data: [{ key: 'igrejaNome', value: '   ' }], // whitespace only
+      error: null,
+    })
+    const c = await getChurchEffective()
+    // Não foi sobrescrito por whitespace
+    expect(c.nome).not.toBe('   ')
+    expect(c.nome.length).toBeGreaterThan(3)
+  })
+
+  it('campos nullable com valor "null" literal viram null', async () => {
+    queueResult({
+      data: [
+        { key: 'contatoTelefone', value: '' },
+        { key: 'socialFacebook', value: '   null  ' },
+      ],
+      error: null,
+    })
+    const c = await getChurchEffective()
+    // contatoTelefone: '' deve manter o default (null no church.json)
+    expect(c.contato.telefone).toBeNull()
+    // socialFacebook: 'null' literal explicitamente vira null
+    expect(c.social.facebook).toBeNull()
   })
 })

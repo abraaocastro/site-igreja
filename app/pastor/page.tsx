@@ -1,14 +1,12 @@
-import { Metadata } from 'next'
+'use client'
+
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Mail, Phone, Instagram, BookOpen, Heart, Users, GraduationCap, Quote, Church, ArrowRight } from 'lucide-react'
+import { Mail, Phone, Instagram, BookOpen, Heart, Users, GraduationCap, Quote, Church as ChurchIcon, ArrowRight } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
-import { getChurch, formatPhone, telHref, mailtoHref } from '@/lib/site-data'
-
-export const metadata: Metadata = {
-  title: 'Conheça o Pastor | Primeira Igreja Batista de Capim Grosso',
-  description: 'Conheça o Pastor Presidente da Primeira Igreja Batista de Capim Grosso.',
-}
+import { getChurch, formatPhone, telHref, mailtoHref, type Church } from '@/lib/site-data'
+import { getChurchEffective } from '@/lib/cms'
 
 const ministerio = [
   { icon: BookOpen, label: 'Pregação Expositiva', description: 'Ensino sistemático da Palavra de Deus' },
@@ -18,10 +16,28 @@ const ministerio = [
 ]
 
 export default function PastorPage() {
-  const { pastor, contato } = getChurch()
+  // Default = JSON estático (evita flash vazio). useEffect substitui pelo
+  // valor efetivo (overrides do CMS por cima do JSON).
+  const [church, setChurch] = useState<Church>(() => getChurch())
+
+  useEffect(() => {
+    let cancelled = false
+    getChurchEffective().then((c) => {
+      if (!cancelled) setChurch(c)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const { pastor, contato } = church
   const pastorEmailLink = mailtoHref(contato.email)
   const pastorPhoneLink = telHref(contato.telefone)
   const pastorPhoneDisplay = formatPhone(contato.telefone)
+  // Handle do Instagram derivado da URL: extrai a última parte do path
+  const instagramHandle = pastor.instagram
+    ? '@' + pastor.instagram.replace(/\/$/, '').split('/').pop()
+    : null
 
   return (
     <div>
@@ -35,14 +51,14 @@ export default function PastorPage() {
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-sm mb-4">
-                <Church className="h-4 w-4 text-accent" />
+                <ChurchIcon className="h-4 w-4 text-accent" />
                 {pastor.titulo}
               </div>
               <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">
                 Pr. {pastor.nome}
               </h1>
               <div className="text-lg opacity-90 max-w-xl leading-relaxed space-y-2">
-                {pastor.bio.map((paragrafo, i) => (
+                {pastor.bio.map((paragrafo: string, i: number) => (
                   <p key={i}>{paragrafo}</p>
                 ))}
               </div>
@@ -64,7 +80,7 @@ export default function PastorPage() {
                     className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-md font-medium transition"
                   >
                     <Instagram className="h-4 w-4" />
-                    @prsilasbarreto
+                    {instagramHandle ?? 'Instagram'}
                   </a>
                 )}
                 <Link
@@ -87,6 +103,7 @@ export default function PastorPage() {
                     sizes="(min-width: 768px) 22rem, 80vw"
                     className="object-cover"
                     priority
+                    unoptimized={pastor.foto.startsWith('http')}
                   />
                 </div>
                 <div className="absolute -bottom-3 -right-3 bg-white text-primary px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-1.5">
@@ -112,13 +129,12 @@ export default function PastorPage() {
                     fill
                     sizes="360px"
                     className="object-cover"
+                    unoptimized={pastor.foto.startsWith('http')}
                   />
                 </div>
                 <h2 className="text-xl font-serif font-bold text-foreground">Pr. {pastor.nome}</h2>
                 <p className="text-sm text-primary font-medium">{pastor.titulo}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Pastoreando a PIBAC
-                </p>
+                <p className="text-sm text-muted-foreground mt-1">Pastoreando a PIBAC</p>
                 {(pastorEmailLink || pastorPhoneLink || pastor.instagram) && (
                   <div className="mt-5 pt-5 border-t border-border space-y-2">
                     {pastorEmailLink && (
@@ -147,7 +163,7 @@ export default function PastorPage() {
                         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
                       >
                         <Instagram className="h-4 w-4 shrink-0" />
-                        @prsilasbarreto
+                        {instagramHandle}
                       </a>
                     )}
                   </div>
@@ -166,7 +182,7 @@ export default function PastorPage() {
             <div>
               <SectionTitle title="Sobre o Pastor" centered={false} />
               <div className="space-y-4 text-muted-foreground leading-relaxed">
-                {pastor.bio.map((paragrafo, i) => (
+                {pastor.bio.map((paragrafo: string, i: number) => (
                   <p key={i}>{paragrafo}</p>
                 ))}
                 <p>
@@ -197,42 +213,6 @@ export default function PastorPage() {
                 <p className="text-sm text-muted-foreground">{item.description}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Mensagem */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="relative bg-card rounded-3xl p-8 md:p-12 shadow-sm border border-border overflow-hidden">
-            <div className="absolute top-0 right-0 h-64 w-64 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <Quote className="h-10 w-10 text-accent mb-4" />
-            <h2 className="text-2xl md:text-3xl font-serif font-bold text-foreground mb-6">
-              Mensagem do Pastor
-            </h2>
-            <div className="space-y-4 text-muted-foreground leading-relaxed">
-              <p>Queridos irmãos e amigos,</p>
-              <p>
-                É com grande alegria que dou as boas-vindas a todos que visitam nossa página.
-                A Primeira Igreja Batista de Capim Grosso é uma comunidade de fé onde você
-                encontrará acolhimento, amor e a oportunidade de crescer no conhecimento de Deus.
-              </p>
-              <p>
-                Nossa igreja existe para glorificar a Deus através da adoração, do discipulado,
-                da comunhão e do evangelismo. Cremos que a Bíblia é a Palavra de Deus e que
-                Jesus Cristo é o único caminho para a salvação.
-              </p>
-              <p>
-                Se você está buscando uma igreja onde possa crescer espiritualmente e servir
-                ao Senhor, venha nos visitar. Será uma honra recebê-lo e caminhar ao seu lado
-                nesta jornada de fé.
-              </p>
-              <p className="text-right italic pt-4 border-t border-border">
-                Com amor em Cristo,
-                <br />
-                <strong className="text-foreground not-italic">Pr. {pastor.nome}</strong>
-              </p>
-            </div>
           </div>
         </div>
       </section>

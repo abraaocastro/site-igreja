@@ -38,6 +38,9 @@ import {
   AlertOctagon,
   Eye,
   RefreshCw,
+  Building2,
+  UserCircle2,
+  History,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { type ChurchAviso, type AvisoSeveridade } from '@/lib/site-data'
@@ -47,6 +50,7 @@ import {
   getEventos,
   getTextos,
   getAviso,
+  getHistoria,
   upsertBanner,
   createBanner,
   deleteBanner,
@@ -56,6 +60,9 @@ import {
   upsertEvento,
   createEvento,
   deleteEvento,
+  upsertHistoria,
+  createHistoria,
+  deleteHistoria,
   saveTextos,
   saveAviso,
   uploadImage,
@@ -64,12 +71,22 @@ import {
   type CmsMinisterio,
   type CmsEvento,
   type CmsTextos,
+  type CmsHistoriaEntry,
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
-type Tab = 'overview' | 'banners' | 'ministerios' | 'eventos' | 'textos' | 'avisos'
+type Tab =
+  | 'overview'
+  | 'avisos'
+  | 'igreja'
+  | 'pastor'
+  | 'historia'
+  | 'banners'
+  | 'ministerios'
+  | 'eventos'
+  | 'textos'
 
 export default function AdminPage() {
   const { user, profile, logout, loading } = useAuth()
@@ -80,6 +97,7 @@ export default function AdminPage() {
   const [banners, setBanners] = useState<CmsBanner[]>([])
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
   const [eventos, setEventos] = useState<CmsEvento[]>([])
+  const [historia, setHistoria] = useState<CmsHistoriaEntry[]>([])
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
   const [aviso, setAviso] = useState<ChurchAviso>({
     ativo: false,
@@ -91,18 +109,20 @@ export default function AdminPage() {
   const [hydrated, setHydrated] = useState(false)
 
   const reloadAll = useCallback(async () => {
-    const [b, m, e, t, a] = await Promise.all([
+    const [b, m, e, t, a, h] = await Promise.all([
       getBanners(),
       getMinisterios(),
       getEventos(),
       getTextos(),
       getAviso(),
+      getHistoria(),
     ])
     setBanners(b)
     setMinisterios(m)
     setEventos(e)
     setTextos(t)
     setAviso(a)
+    setHistoria(h)
     setHydrated(true)
   }, [])
 
@@ -130,6 +150,9 @@ export default function AdminPage() {
   const tabs: Array<{ id: Tab; label: string; icon: typeof LayoutDashboard }> = [
     { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'avisos', label: 'Avisos', icon: Megaphone },
+    { id: 'igreja', label: 'Igreja', icon: Building2 },
+    { id: 'pastor', label: 'Pastor', icon: UserCircle2 },
+    { id: 'historia', label: 'História', icon: History },
     { id: 'banners', label: 'Banners', icon: ImageIcon },
     { id: 'ministerios', label: 'Ministérios', icon: Users },
     { id: 'eventos', label: 'Eventos e Datas', icon: Calendar },
@@ -239,6 +262,56 @@ export default function AdminPage() {
             onSaved={(saved) => {
               setAviso(saved)
               toast.success(saved.ativo ? 'Aviso publicado.' : 'Aviso salvo (desativado).')
+            }}
+          />
+        )}
+
+        {tab === 'igreja' && (
+          <IgrejaEditor
+            textos={textos}
+            onSaved={(updated) => {
+              setTextos((prev) => ({ ...prev, ...updated }))
+              toast.success('Dados da igreja atualizados.')
+            }}
+          />
+        )}
+
+        {tab === 'pastor' && (
+          <PastorEditor
+            textos={textos}
+            onSaved={(updated) => {
+              setTextos((prev) => ({ ...prev, ...updated }))
+              toast.success('Dados do pastor atualizados.')
+            }}
+          />
+        )}
+
+        {tab === 'historia' && (
+          <HistoriaEditor
+            items={historia}
+            textos={textos}
+            onCreate={async (h) => {
+              const created = await createHistoria(h)
+              setHistoria((prev) => [...prev, created])
+              toast.success('Marco histórico criado.')
+            }}
+            onUpdate={async (h) => {
+              const saved = await upsertHistoria(h)
+              setHistoria((prev) =>
+                prev.some((x) => x.id === h.id)
+                  ? prev.map((x) => (x.id === h.id ? saved : x))
+                  : [...prev.filter((x) => x.id !== h.id), saved]
+              )
+              toast.success('Marco salvo.')
+            }}
+            onDelete={async (id) => {
+              await deleteHistoria(id)
+              setHistoria((prev) => prev.filter((x) => x.id !== id))
+              toast.success('Marco removido.')
+            }}
+            onSaveTextos={(updated) => {
+              setTextos((prev) => ({ ...prev, ...updated }))
+              toast.success('Textos da página /história atualizados.')
             }}
           />
         )}
@@ -1076,6 +1149,462 @@ function TextosEditor({
             Salvar alterações
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ======================== IgrejaEditor ========================
+//
+// Edita dados institucionais da igreja: endereço, contato, redes sociais e
+// chave PIX. Tudo é gravado em `cms_textos` (KV) com chaves prefixadas. As
+// páginas públicas mesclam esses valores com os defaults de data/church.json
+// via `getChurchEffective()`.
+
+const IGREJA_FIELDS: Array<{
+  key: string
+  label: string
+  placeholder?: string
+  group: 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'
+  type?: 'text' | 'textarea'
+}> = [
+  // Identidade
+  { group: 'identidade', key: 'igrejaNome', label: 'Nome completo', placeholder: 'Primeira Igreja Batista de Capim Grosso' },
+  { group: 'identidade', key: 'igrejaNomeCurto', label: 'Nome curto', placeholder: 'PIBAC' },
+  { group: 'identidade', key: 'igrejaSlogan', label: 'Slogan', placeholder: 'Uma comunidade de fé...' },
+  // Endereço
+  { group: 'endereco', key: 'enderecoRua', label: 'Rua' },
+  { group: 'endereco', key: 'enderecoNumero', label: 'Número' },
+  { group: 'endereco', key: 'enderecoBairro', label: 'Bairro' },
+  { group: 'endereco', key: 'enderecoCidade', label: 'Cidade' },
+  { group: 'endereco', key: 'enderecoEstado', label: 'Estado (sigla)', placeholder: 'BA' },
+  { group: 'endereco', key: 'enderecoCep', label: 'CEP', placeholder: '44695-000' },
+  // Contato
+  { group: 'contato', key: 'contatoTelefone', label: 'Telefone fixo (opcional)', placeholder: '+5574...' },
+  { group: 'contato', key: 'contatoWhatsapp', label: 'WhatsApp', placeholder: '+5574...' },
+  { group: 'contato', key: 'contatoEmail', label: 'E-mail oficial', placeholder: 'contato@pibac.com.br' },
+  // Social
+  { group: 'social', key: 'socialInstagram', label: 'Instagram da igreja (URL)' },
+  { group: 'social', key: 'socialInstagramPastor', label: 'Instagram do pastor (URL)' },
+  { group: 'social', key: 'socialInstagramJovens', label: 'Instagram dos jovens (URL)' },
+  { group: 'social', key: 'socialFacebook', label: 'Facebook (URL, opcional)' },
+  { group: 'social', key: 'socialYoutube', label: 'YouTube (URL, opcional)' },
+  // PIX
+  { group: 'pix', key: 'pixChave', label: 'Chave PIX' },
+  { group: 'pix', key: 'pixTipo', label: 'Tipo (email/cpf/cnpj/telefone/aleatoria)', placeholder: 'email' },
+  { group: 'pix', key: 'pixTitular', label: 'Titular da conta' },
+]
+
+const IGREJA_GROUPS: Array<{ id: 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'; title: string; description: string }> = [
+  { id: 'identidade', title: 'Identidade', description: 'Como a igreja se chama e se apresenta.' },
+  { id: 'endereco', title: 'Endereço', description: 'Onde fica fisicamente.' },
+  { id: 'contato', title: 'Contato', description: 'Telefone, WhatsApp e e-mail oficial.' },
+  { id: 'social', title: 'Redes sociais', description: 'Links das contas oficiais.' },
+  { id: 'pix', title: 'PIX', description: 'Chave PIX para contribuições. Aparece em /contribua.' },
+]
+
+function IgrejaEditor({
+  textos,
+  onSaved,
+}: {
+  textos: CmsTextos
+  onSaved: (updated: CmsTextos) => void
+}) {
+  // Inicializa com o que já está salvo + placeholders vazios pras chaves novas
+  const initial: CmsTextos = {}
+  IGREJA_FIELDS.forEach((f) => {
+    initial[f.key] = textos[f.key] ?? ''
+  })
+  const [draft, setDraft] = useState<CmsTextos>(initial)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const next: CmsTextos = {}
+    IGREJA_FIELDS.forEach((f) => {
+      next[f.key] = textos[f.key] ?? ''
+    })
+    setDraft(next)
+  }, [textos])
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
+
+  const save = async () => {
+    setBusy(true)
+    try {
+      // Pega só as chaves do form Igreja (não bagunça outros textos)
+      const subset: CmsTextos = {}
+      IGREJA_FIELDS.forEach((f) => {
+        subset[f.key] = draft[f.key] ?? ''
+      })
+      await saveTextos(subset)
+      onSaved(subset)
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          Dados da Igreja
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Endereço, contatos, redes sociais e PIX. Tudo aqui aparece nas páginas <code>/contato</code>,{' '}
+          <code>/contribua</code>, no rodapé e nos cards de pastor/visão.
+        </p>
+      </div>
+
+      {IGREJA_GROUPS.map((g) => {
+        const fields = IGREJA_FIELDS.filter((f) => f.group === g.id)
+        return (
+          <div key={g.id} className="bg-card rounded-lg border border-border p-5 space-y-3">
+            <div>
+              <p className="font-medium text-foreground">{g.title}</p>
+              <p className="text-xs text-muted-foreground">{g.description}</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {fields.map((f) => (
+                <div key={f.key} className={fields.length === 1 ? 'sm:col-span-2' : ''}>
+                  <label className="block text-xs font-medium text-foreground mb-1">{f.label}</label>
+                  <input
+                    type="text"
+                    value={draft[f.key] ?? ''}
+                    onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                    placeholder={f.placeholder}
+                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      <div className="sticky bottom-4 z-10">
+        <div
+          className={cn(
+            'rounded-lg border shadow-lg backdrop-blur p-3 flex items-center justify-between gap-3 transition',
+            dirty ? 'bg-card/95 border-primary/30' : 'bg-card/80 border-border'
+          )}
+        >
+          <p className="text-xs text-muted-foreground">
+            {dirty ? '💾 Você tem alterações não salvas.' : '✓ Tudo salvo.'}
+          </p>
+          <button
+            onClick={save}
+            disabled={!dirty || busy}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Publicar mudanças
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground">
+        <p className="font-medium mb-1">💡 Como funciona</p>
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          Campos vazios usam o valor padrão de <code>data/church.json</code>. Pra remover de fato
+          algo (ex: WhatsApp), apague o conteúdo do campo e salve. O site cai pro padrão estático
+          (que pode ser <code>null</code>, ocultando o item).
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ======================== PastorEditor ========================
+
+const PASTOR_FIELDS: Array<{ key: string; label: string; placeholder?: string }> = [
+  { key: 'pastorNome', label: 'Nome', placeholder: 'Silas Barreto' },
+  { key: 'pastorTitulo', label: 'Título', placeholder: 'Pastor Presidente' },
+  { key: 'pastorInstagram', label: 'Instagram (URL)', placeholder: 'https://www.instagram.com/...' },
+]
+
+function PastorEditor({
+  textos,
+  onSaved,
+}: {
+  textos: CmsTextos
+  onSaved: (updated: CmsTextos) => void
+}) {
+  const initial: CmsTextos = {
+    pastorNome: textos.pastorNome ?? '',
+    pastorTitulo: textos.pastorTitulo ?? '',
+    pastorBio: textos.pastorBio ?? '',
+    pastorFoto: textos.pastorFoto ?? '',
+    pastorInstagram: textos.pastorInstagram ?? '',
+  }
+  const [draft, setDraft] = useState<CmsTextos>(initial)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    setDraft({
+      pastorNome: textos.pastorNome ?? '',
+      pastorTitulo: textos.pastorTitulo ?? '',
+      pastorBio: textos.pastorBio ?? '',
+      pastorFoto: textos.pastorFoto ?? '',
+      pastorInstagram: textos.pastorInstagram ?? '',
+    })
+  }, [textos])
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
+
+  const save = async () => {
+    setBusy(true)
+    try {
+      await saveTextos(draft)
+      onSaved(draft)
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <UserCircle2 className="h-5 w-5 text-primary" />
+          Pastor
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Dados que aparecem na página <code>/pastor</code> e nos cards do site.
+        </p>
+      </div>
+
+      {/* Foto */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-3">
+        <p className="font-medium text-foreground">Foto</p>
+        <ImageField
+          value={draft.pastorFoto ?? ''}
+          onChange={(v) => setDraft((d) => ({ ...d, pastorFoto: v }))}
+        />
+        <p className="text-xs text-muted-foreground">
+          Recomendado: foto quadrada (1:1), ao menos 800×800px. O site exibe em formato circular.
+        </p>
+      </div>
+
+      {/* Identificação */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-3">
+        <p className="font-medium text-foreground">Identificação</p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {PASTOR_FIELDS.map((f) => (
+            <div key={f.key}>
+              <label className="block text-xs font-medium text-foreground mb-1">{f.label}</label>
+              <input
+                type="text"
+                value={draft[f.key] ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                placeholder={f.placeholder}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bio */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-3">
+        <p className="font-medium text-foreground">Biografia</p>
+        <textarea
+          value={draft.pastorBio ?? ''}
+          onChange={(e) => setDraft((d) => ({ ...d, pastorBio: e.target.value }))}
+          placeholder="Escreva a bio do pastor. Use uma linha em branco entre parágrafos pra separá-los no site."
+          rows={8}
+          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+        />
+        <p className="text-xs text-muted-foreground">
+          {(draft.pastorBio ?? '').length} caracteres ·{' '}
+          {(draft.pastorBio ?? '').split(/\n{2,}/).filter(Boolean).length} parágrafo(s)
+        </p>
+      </div>
+
+      <div className="sticky bottom-4 z-10">
+        <div
+          className={cn(
+            'rounded-lg border shadow-lg backdrop-blur p-3 flex items-center justify-between gap-3 transition',
+            dirty ? 'bg-card/95 border-primary/30' : 'bg-card/80 border-border'
+          )}
+        >
+          <p className="text-xs text-muted-foreground">
+            {dirty ? '💾 Você tem alterações não salvas.' : '✓ Tudo salvo.'}
+          </p>
+          <button
+            onClick={save}
+            disabled={!dirty || busy}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Publicar mudanças
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ======================== HistoriaEditor ========================
+//
+// Combina:
+//   - Form pros textos da página /historia (intro + citação) → cms_textos
+//   - CRUD da timeline → cms_historia (reusa CardsEditor)
+
+const HISTORIA_TEXTOS_FIELDS: Array<{ key: string; label: string; textarea?: boolean }> = [
+  { key: 'historiaIntroTitulo', label: 'Título da introdução' },
+  { key: 'historiaIntroSubtitulo', label: 'Subtítulo da introdução' },
+  { key: 'historiaIntroTexto', label: 'Texto da introdução', textarea: true },
+  { key: 'historiaCitacao', label: 'Citação bíblica' },
+  { key: 'historiaCitacaoRef', label: 'Referência da citação', },
+  { key: 'historiaCitacaoTexto', label: 'Comentário da citação', textarea: true },
+]
+
+function HistoriaEditor({
+  items,
+  textos,
+  onCreate,
+  onUpdate,
+  onDelete,
+  onSaveTextos,
+}: {
+  items: CmsHistoriaEntry[]
+  textos: CmsTextos
+  onCreate: (h: Omit<CmsHistoriaEntry, 'id'>) => Promise<void>
+  onUpdate: (h: CmsHistoriaEntry) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onSaveTextos: (updated: CmsTextos) => void
+}) {
+  // Como `sortOrder` virá do FieldEditor como string (input type=text),
+  // coercemos pra int no momento de salvar pra bater com a coluna do DB.
+  const coerce = <T extends { sortOrder: number | string }>(h: T): T => ({
+    ...h,
+    sortOrder: typeof h.sortOrder === 'number' ? h.sortOrder : parseInt(String(h.sortOrder || '0'), 10) || 0,
+  })
+  const wrappedCreate = (h: Omit<CmsHistoriaEntry, 'id'>) => onCreate(coerce(h))
+  const wrappedUpdate = (h: CmsHistoriaEntry) => onUpdate(coerce(h))
+  const initial: CmsTextos = {}
+  HISTORIA_TEXTOS_FIELDS.forEach((f) => {
+    initial[f.key] = textos[f.key] ?? ''
+  })
+  const [draft, setDraft] = useState<CmsTextos>(initial)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const next: CmsTextos = {}
+    HISTORIA_TEXTOS_FIELDS.forEach((f) => {
+      next[f.key] = textos[f.key] ?? ''
+    })
+    setDraft(next)
+  }, [textos])
+
+  const textosDirty = JSON.stringify(draft) !== JSON.stringify(initial)
+
+  const saveTextosOnly = async () => {
+    setBusy(true)
+    try {
+      const subset: CmsTextos = {}
+      HISTORIA_TEXTOS_FIELDS.forEach((f) => {
+        subset[f.key] = draft[f.key] ?? ''
+      })
+      await saveTextos(subset)
+      onSaveTextos(subset)
+    } catch (err) {
+      console.error(err)
+      toast.error(err instanceof Error ? err.message : 'Erro ao salvar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <History className="h-5 w-5 text-primary" />
+          Página /história
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Edita os textos da introdução, da citação bíblica e a linha do tempo da igreja.
+        </p>
+      </div>
+
+      {/* Textos da página */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-4">
+        <p className="font-medium text-foreground">Textos da página</p>
+        {HISTORIA_TEXTOS_FIELDS.map((f) => (
+          <div key={f.key}>
+            <label className="block text-xs font-medium text-foreground mb-1">{f.label}</label>
+            {f.textarea ? (
+              <textarea
+                value={draft[f.key] ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                rows={3}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring resize-y"
+              />
+            ) : (
+              <input
+                type="text"
+                value={draft[f.key] ?? ''}
+                onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            )}
+          </div>
+        ))}
+        <div className="flex justify-end pt-2 border-t border-border">
+          <button
+            onClick={saveTextosOnly}
+            disabled={!textosDirty || busy}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar textos
+          </button>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-3">
+        <p className="font-medium text-foreground mb-1">Linha do tempo</p>
+        <p className="text-xs text-muted-foreground mb-4">
+          Cada marco vira um card na seção timeline da página /história. Use{' '}
+          <strong>ordem</strong> pra controlar a sequência (menor primeiro). O ano pode ser texto
+          livre — &quot;1970&quot;, &quot;Hoje&quot;, &quot;Década de 90&quot;.
+        </p>
+        <CardsEditor<CmsHistoriaEntry>
+          items={items}
+          onCreate={wrappedCreate}
+          onUpdate={wrappedUpdate}
+          onDelete={onDelete}
+          fields={[
+            { key: 'year', label: 'Ano (texto)', type: 'text' },
+            { key: 'title', label: 'Título', type: 'text' },
+            { key: 'description', label: 'Descrição', type: 'textarea' },
+            { key: 'imageUrl', label: 'Imagem', type: 'image' },
+            { key: 'sortOrder', label: 'Ordem (número, menor primeiro)', type: 'text' },
+          ]}
+          makeNew={() => ({
+            year: 'Ano',
+            title: 'Novo marco',
+            description: '',
+            imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=600&q=80',
+            sortOrder: items.length,
+          })}
+          title=""
+          description=""
+          preview={(h) => ({
+            title: `${h.year} — ${h.title}`,
+            subtitle: h.description,
+            imageUrl: h.imageUrl,
+          })}
+        />
       </div>
     </div>
   )

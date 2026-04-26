@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-25 (Phase 8 entregue — CMS no Supabase)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.4
+> **Última atualização:** 2026-04-25 (Phase 9 entregue — admin com cobertura total)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.5
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **nenhuma** — Phases 1–4 + **8** ✅ concluídas. Phases 5/6 fundidas em 8. Próxima recomendada: **Phase 7 (SEO)**.
+> **Fase em andamento:** **nenhuma** — Phases 1–4, 8 e **9** ✅ concluídas. Phases 5/6 fundidas em 8. Próxima recomendada: **Phase 7 (SEO)**.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -20,15 +20,15 @@
 ## 🎯 Próximos passos (atualizado 2026-04-25)
 
 ### 🔴 Bloqueio pra "site 100% pronto pro mundo"
-1. **Validar o CMS em produção** (o stakeholder, agora) — entrar em `/admin`, criar 1 banner novo, fazer upload de uma foto real, ver aparecer no site público em outro navegador. Se algo falhar (RLS, upload, etc), me avise e eu corrijo.
-2. **Preencher conteúdo TODO via /admin** (admin pode fazer agora, sem dev):
-   - Trocar fotos Unsplash dos ministérios por fotos reais
-   - Trocar fotos Unsplash dos eventos por fotos reais
-   - Banners da home com fotos da igreja
-3. **E-mail oficial da igreja** — ainda `TODO` em `data/church.json#contato.email`. Enquanto não preencher, o card de e-mail no `/contato` some.
-4. **Chave PIX** — ainda `TODO` em `data/church.json#pix.chave`. Enquanto não preencher, `/contribua` mostra "em configuração".
+1. **Rodar `supabase/migrations/003_cms_full.sql`** no SQL Editor do Supabase (cria a tabela `cms_historia` necessária pra Phase 9).
+2. **Validar o CMS em produção** — entrar em `/admin`, testar todas as 9 abas (Visão Geral, Avisos, **Igreja**, **Pastor**, **História**, Banners, Ministérios, Eventos, Textos), salvar mudanças, ver aparecer no site público.
+3. **Preencher conteúdo TODO via /admin → Igreja** (sem dev, agora):
+   - Aba **Igreja → Contato → E-mail**: e-mail oficial da secretaria
+   - Aba **Igreja → PIX → Chave**: chave PIX da tesouraria
+   - Aba **Pastor → Foto/Bio**: foto/bio reais
+4. **Trocar fotos Unsplash por fotos reais** via /admin → Banners/Ministérios/Eventos/História.
 
-> Itens 3 e 4 vivem em `data/church.json` (não no banco) porque são dados **canônicos institucionais**. Pra mudar, comita o JSON e push. Em uma fase futura podemos mover pro banco também.
+> Os campos de e-mail e PIX agora ficam no banco (`cms_textos` KV). `data/church.json` continua sendo o fallback estático/SSR mas o admin não precisa mais comitar JSON pra mudar.
 
 ### 🟡 Phase 7 — SEO local (próxima fase técnica)
 
@@ -101,6 +101,7 @@ o agente deve:
 | `480cd11` | fix(bootstrap): parser de CRLF + upsert no profile | Tira `\r` antes do regex (`.env.local` salvo no Windows); troca `update` por `upsert` em `profiles` (cobre user criado antes da trigger existir) |
 | `9a74ef5` | chore(next16): renomeia middleware.ts → proxy.ts | Convenção nova do Next 16 (mesmo runtime, só nome novo do arquivo + da função exportada) |
 | `f289bd7` | feat(phase-4+8): avisos globais + CMS no Supabase | **Phase 4** — `<AvisoBanner>` (3 severidades, dispense via sessionStorage com chave por hash da mensagem, prop `forceOpen` pra preview), injetado em `app/layout.tsx` acima do `<Header>`, 12 testes RTL. **Phase 8** — migration 002 com 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos`, `cms_avisos`) + helper `is_cms_writer()` + RLS (público lê, writer escreve) + bucket `public-images` + seeds idempotentes. `lib/cms.ts` com readers/writers + `uploadImage`. Admin reescrito pra usar banco. Páginas públicas e AvisoBanner refatorados pra ler do banco com fallback nos defaults. **15 testes novos (59 totais).** Migration rodada manualmente no Supabase em 2026-04-25. |
+| _pending_ | feat(phase-9): cobertura total do admin | Migration 003 com tabela `cms_historia` (timeline) + RLS + seeds. `lib/cms.ts` ganha CRUD de historia + `getChurchEffective()` que merge `cms_textos` KV em cima de `data/church.json` (campos: igreja/endereço/contato/social/pastor/pix/historia). 3 abas novas no /admin: **Igreja** (5 grupos: identidade/endereço/contato/social/pix), **Pastor** (foto + bio + identificação), **História** (textos + CRUD timeline). Páginas `/historia`, `/pastor`, `/contribua`, `/contato` e `<Footer>` refatorados pra usar o merger. Container "valor sugerido" removido de /contribua. **10 testes novos (69 totais).** |
 
 ---
 
@@ -305,9 +306,10 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | ~ | Migração `middleware.ts → proxy.ts` (Next 16) | ✅ Aplicada | `9a74ef5` |
 | 4 | Avisos globais (banner toggleável com severidade) | ✅ Completa | `f289bd7` |
 | 5 | ~~Programação (eventos + horários consolidados)~~ | ☑️ **Fundida em Phase 8** (eventos vivem no banco) | — |
-| 6 | ~~Admin UI pra editar JSON~~ | ☑️ **Fundida em Phase 8** (admin escreve direto no banco) | — |
+| 6 | ~~Admin UI pra editar JSON~~ | ☑️ **Fundida em Phases 8 + 9** (admin escreve direto no banco, com cobertura total) | — |
 | **7** | **SEO completo (sitemap, robots, OG, rich results)** | ⏭️ **Próxima sugerida** — base JSON-LD já entregue | — |
 | 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
+| 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | _pending commit_ |
 
 ---
 
@@ -391,11 +393,34 @@ ainda existe como defaults pro fallback (página renderiza mesmo se DB
 estiver offline), mas não é mais a fonte de verdade em produção. Não
 precisa mais migrar pra JSONs separados — o banco resolve.
 
-### ☑️ Phase 6 — fundida em Phase 8
+### ☑️ Phase 6 — fundida em Phases 8 + 9
 
-Admin escreve direto no banco com upload de imagem pro bucket. Não
-precisa mais de export/import JSON manual nem diff visual — toda mudança
-é persistida ao salvar.
+Admin escreve direto no banco com upload de imagem pro bucket. Phase 9
+adicionou cobertura total (Igreja/Pastor/História). Não precisa mais
+de export/import JSON manual nem diff visual — toda mudança é persistida
+ao salvar.
+
+### ✅ Phase 9 — Cobertura total do admin (entregue 2026-04-25)
+
+- `supabase/migrations/003_cms_full.sql`: tabela `cms_historia` (timeline)
+  + RLS + seeds idempotentes (8 marcos)
+- `lib/cms.ts` ganha:
+  - `CmsHistoriaEntry` + readers/writers (`getHistoria`, `createHistoria`,
+    `upsertHistoria`, `deleteHistoria`)
+  - **`getChurchEffective()`** — merger que pega defaults de
+    `data/church.json` e sobrepõe overrides do KV `cms_textos`
+    (igreja/endereço/contato/social/pastor/pix/historia)
+  - Constante `CHURCH_TEXTOS_KEYS` mapeando os grupos
+- 3 abas novas no `/admin`:
+  - **Igreja** — 5 grupos (identidade/endereço/contato/social/pix) com sticky save bar
+  - **Pastor** — foto com upload + nome/título/instagram + bio (textarea com contador de parágrafos)
+  - **História** — textos da página (intro + citação) + CRUD da timeline
+- Páginas refatoradas pra usar `getChurchEffective()`: `/historia`,
+  `/pastor`, `/contribua`, `/contato`, `<Footer>`
+- **Removido** o container "valores sugeridos" (R$ 25/50/100/200/500) de
+  `/contribua` por feedback do stakeholder
+- 10 testes novos em `__tests__/lib/cms.test.ts` — **69 totais**
+- **Manual:** rodar `003_cms_full.sql` no SQL Editor uma vez
 
 ### 🟡 Phase 7 — SEO local (próxima sugerida)
 

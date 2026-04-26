@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Copy, Check, Heart, PiggyBank, HandCoins, Gift, QrCode, Landmark, Clock } from 'lucide-react'
-import { SectionTitle } from '@/components/section-title'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { getChurch, hasPix } from '@/lib/site-data'
+import { getChurch, type Church, type PixTipo } from '@/lib/site-data'
+import { getChurchEffective } from '@/lib/cms'
 
 const METHODS = [
   { id: 'pix', label: 'PIX', icon: QrCode },
@@ -13,13 +13,22 @@ const METHODS = [
   { id: 'presencial', label: 'Presencial', icon: Gift },
 ]
 
-const VALORES_RAPIDOS = [25, 50, 100, 200, 500]
-
 export default function ContribuaPage() {
   const [method, setMethod] = useState<string>('pix')
-  const [valor, setValor] = useState<number | ''>('')
   const [tipo, setTipo] = useState<'dizimo' | 'oferta' | 'missoes'>('dizimo')
   const [copiado, setCopiado] = useState<string | null>(null)
+  // Default sync do JSON pra evitar flash; useEffect substitui pelo efetivo (CMS).
+  const [church, setChurch] = useState<Church>(() => getChurch())
+
+  useEffect(() => {
+    let cancelled = false
+    getChurchEffective().then((c) => {
+      if (!cancelled) setChurch(c)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text)
@@ -28,20 +37,18 @@ export default function ContribuaPage() {
     setTimeout(() => setCopiado(null), 2000)
   }
 
-  // Dados PIX vindos de data/church.json — ficam com placeholder TODO até a
-  // tesouraria fornecer a chave real. `hasPix()` controla a renderização.
-  const church = getChurch()
-  const pixConfigured = hasPix()
+  // Considera PIX configurado se a chave não estiver vazia nem no formato TODO.
+  // (Avaliado a partir do `church` efetivo — admin pode ter sobrescrito via CMS.)
   const chavePix = church.pix.chave
-  const pixTipoLabel: Record<typeof church.pix.tipo, string> = {
+  const pixConfigured = isPixConfigured(chavePix)
+  const pixTipoLabel: Record<PixTipo, string> = {
     email: 'E-mail',
     cpf: 'CPF',
     cnpj: 'CNPJ',
     telefone: 'Telefone',
     aleatoria: 'Chave aleatória',
   }
-  // Dados bancários: ainda não foram fornecidos pela tesouraria. Mantemos a
-  // aba "Transferência" com um aviso de "em breve" pra não exibir valores falsos.
+  // Dados bancários: ainda não foram fornecidos pela tesouraria.
   const bancoConfigured = false
 
   return (
@@ -91,37 +98,6 @@ export default function ContribuaPage() {
             ))}
           </div>
 
-          {/* Valor sugerido */}
-          <div className="bg-card rounded-xl border border-border p-5 mb-6 shadow-sm">
-            <p className="text-sm font-medium text-foreground mb-3">Valor sugerido (opcional)</p>
-            <div className="flex flex-wrap gap-2">
-              {VALORES_RAPIDOS.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setValor(v)}
-                  className={cn(
-                    'px-4 py-2 rounded-full text-sm font-medium transition',
-                    valor === v
-                      ? 'bg-primary text-primary-foreground shadow'
-                      : 'bg-muted text-foreground hover:bg-accent/20'
-                  )}
-                >
-                  R$ {v}
-                </button>
-              ))}
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm text-muted-foreground">R$</span>
-                <input
-                  type="number"
-                  value={valor}
-                  onChange={(e) => setValor(e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="Outro valor"
-                  className="w-32 px-3 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring text-sm"
-                />
-              </div>
-            </div>
-          </div>
-
           {/* Método */}
           <div className="flex gap-1 bg-muted p-1 rounded-lg mb-6">
             {METHODS.map((m) => (
@@ -169,13 +145,6 @@ export default function ContribuaPage() {
                         {copiado === 'pix' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                     </div>
-                    {valor && (
-                      <p className="mt-4 text-sm text-muted-foreground">
-                        Ao realizar a transferência, informe o valor de{' '}
-                        <strong className="text-primary">R$ {Number(valor).toFixed(2)}</strong> e a categoria{' '}
-                        <strong className="text-primary capitalize">{tipo}</strong> no campo de mensagem.
-                      </p>
-                    )}
                     <div className="mt-4 p-3 rounded-lg bg-accent/10 border border-accent/30 text-sm text-foreground">
                       <strong>Dica:</strong> No campo &quot;mensagem&quot; do PIX, informe se é dízimo, oferta ou missões
                       para facilitar a identificação.
@@ -247,4 +216,16 @@ export default function ContribuaPage() {
       </section>
     </div>
   )
+}
+
+/**
+ * Checagem da chave PIX em runtime (admin pode ter sobrescrito via CMS).
+ * Independente do helper estático `hasPix()`, que olha o JSON.
+ */
+function isPixConfigured(chave: string): boolean {
+  if (!chave) return false
+  const trimmed = chave.trim()
+  if (trimmed === '') return false
+  if (trimmed.toUpperCase().includes('TODO')) return false
+  return true
 }

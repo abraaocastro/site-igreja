@@ -1,3 +1,6 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
@@ -5,7 +8,9 @@ import {
 } from 'lucide-react'
 import {
   getChurch, formatAddressOneLine, formatPhone, telHref, mailtoHref, whatsappHref, getMapsDirectionsUrl,
+  type Church,
 } from '@/lib/site-data'
+import { getChurchEffective } from '@/lib/cms'
 
 const footerLinks = {
   igreja: [
@@ -28,7 +33,18 @@ const footerLinks = {
 }
 
 export function Footer() {
-  const church = getChurch()
+  // Inicia com defaults do JSON (renderiza imediato no SSR / hidratação),
+  // depois substitui pelo `Church` efetivo vindo do CMS.
+  const [church, setChurch] = useState<Church>(() => getChurch())
+  useEffect(() => {
+    let cancelled = false
+    getChurchEffective().then((c) => {
+      if (!cancelled) setChurch(c)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const { endereco, contato, social } = church
   const phoneDisplay = formatPhone(contato.telefone)
   const phoneLink = telHref(contato.telefone)

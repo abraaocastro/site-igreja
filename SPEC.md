@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.4 (2026-04-25)
-**Status:** Em execução — Phases 1–4 ✅ + **Phase 8** ✅ concluídas e em produção (commit `f289bd7`). Auth + CMS Supabase ativos. Phases 5/6 ficam **fundidas em 8** (eventos/ministérios/banners/textos/avisos já vivem no banco). **Próximo:** Phase 7 (SEO).
+**Versão:** 2.5 (2026-04-25)
+**Status:** Em execução — Phases 1–4, 8 e **9** ✅ concluídas. Admin tem cobertura total: edita Igreja (endereço/contato/socials/PIX), Pastor (nome/foto/bio), História (timeline + textos), Banners, Ministérios, Eventos, Textos e Avisos — **tudo no banco**. Phases 5/6 fundidas em 8. **Próximo:** Phase 7 (SEO).
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -417,6 +417,48 @@ edição do admin apareça pra todo mundo, em qualquer dispositivo.
 
 ---
 
+### Phase 9 — Cobertura total do admin ✅ (concluída 2026-04-25)
+Objetivo: admin edita TODA informação do site sem depender de dev. Inclui
+endereço, contato, redes sociais, PIX, dados do pastor (nome/foto/bio) e a
+linha do tempo da página /história. Também remove o card de "valores
+sugeridos" em /contribua (não combina com tom de igreja).
+
+**Tasks**
+- [x] 9.1. Migration `003_cms_full.sql`:
+  - Tabela `cms_historia` (timeline) com RLS + trigger `updated_at`
+  - Seeds idempotentes da timeline original (8 marcos de 1970 a "Hoje")
+  - Documenta as novas chaves do `cms_textos` (KV) que admin pode preencher
+- [x] 9.2. `lib/cms.ts` ganha:
+  - Type `CmsHistoriaEntry` + readers/writers da timeline
+  - `getChurchEffective()` — merger que pega defaults de `data/church.json` e sobrepõe overrides do `cms_textos` KV (campos `igrejaNome`, `enderecoRua`, `pastorBio`, `pixChave` etc.)
+  - Constante `CHURCH_TEXTOS_KEYS` mapeando os grupos pra reuso na UI
+- [x] 9.3. Refactor páginas:
+  - `/historia` → client component que lê timeline do banco + textos via `getTextos()`
+  - `/pastor` → usa `getChurchEffective()` (mostra nome/foto/bio editáveis)
+  - `/contribua` → usa `getChurchEffective()` para PIX **e remove o container de valores rápidos** (R$ 25/50/100/200/500)
+  - `/contato` → usa `getChurchEffective()`
+  - `<Footer>` vira client component pra também respeitar overrides
+- [x] 9.4. `/admin` ganha 3 abas novas:
+  - **Igreja** — endereço, contato (telefone/whatsapp/email), redes sociais, PIX (5 grupos com sticky save bar)
+  - **Pastor** — nome, título, instagram, foto (com upload), bio (textarea com contador de parágrafos)
+  - **História** — textos da página (intro + citação) + CRUD da timeline (reusa CardsEditor)
+- [x] 9.5. Tests: 10 novos em `__tests__/lib/cms.test.ts` cobrindo historia readers/writers + getChurchEffective merger (defaults, overrides, valores vazios, "null" literal)
+
+**Acceptance**
+- [x] `npm run typecheck` passa
+- [x] `npm test` passa (69/69)
+- [x] `npm run build` passa (16 rotas)
+- [x] Admin edita endereço/PIX/foto-do-pastor/bio → todos os visitantes veem na próxima carga
+- [x] Container "Valor sugerido" sumiu de /contribua
+- [x] Ainda funciona offline (fallback pros defaults de `data/church.json`)
+
+**Manual setup necessário (uma vez)**
+1. **Rodar `supabase/migrations/003_cms_full.sql`** no SQL Editor do Supabase
+2. Conferir que `cms_historia` aparece em Table Editor
+3. Vercel redeploia automaticamente no push
+
+---
+
 ## 6. Riscos e decisões arquiteturais
 
 | Risco | Mitigação |
@@ -442,7 +484,7 @@ edição do admin apareça pra todo mundo, em qualquer dispositivo.
 
 ## 8. Status atual
 
-- [x] Spec v2.4 escrito
+- [x] Spec v2.5 escrito
 - [x] **Phase 1 — Foundation** (concluída)
 - [x] **Phase 2 — Geolocalização** (concluída)
 - [x] **Phase 3 — Auth Supabase** (concluída ponta-a-ponta — login funcionando em dev e prod)
@@ -450,14 +492,20 @@ edição do admin apareça pra todo mundo, em qualquer dispositivo.
 - [x] **Migração `middleware.ts` → `proxy.ts`** (Next 16 compliance)
 - [x] **Phase 4 — Avisos banner** (concluída — `<AvisoBanner>` + aba `/admin/avisos` + 12 testes)
 - [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
-- [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8** (eventos já vivem no banco)
-- [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8** (admin escreve direto no banco)
+- [x] **Phase 9 — Cobertura total do admin** (concluída — Igreja/Pastor/História editáveis via `cms_textos` KV + nova tabela `cms_historia`. Container "valor sugerido" removido de /contribua. 10 testes novos, 69 totais.)
+- [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8**
+- [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8 + 9**
 - [ ] **Phase 7 — SEO local** — próxima sugerida (metadata page-by-page, sitemap, robots, Lighthouse)
 
-### Pendências de conteúdo (não-código) que ainda viram TODO/null no JSON
+### Pendências de conteúdo (não-código)
 
-- E-mail oficial da secretaria (`contato.email` está como TODO)
-- Chave PIX (`pix.chave` está TODO — infra pronta, só falta o dado)
+Hoje ainda dependem de admin preencher via `/admin → Igreja`:
+- E-mail oficial da secretaria (campo `contatoEmail`)
+- Chave PIX (campo `pixChave`)
+
+Quando admin preencher esses campos no painel, os fallbacks TODO em
+`data/church.json` deixam de ser usados em produção. JSON continua sendo
+o fallback de SSR e build estático.
 
 ---
 
@@ -465,6 +513,7 @@ edição do admin apareça pra todo mundo, em qualquer dispositivo.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-25 | 2.5 | Phase 9 (cobertura total do admin) entregue: migration 003 com `cms_historia`, `getChurchEffective()` mergeando KV em cima do JSON, `/historia /pastor /contribua /contato /footer` consumindo CMS, 3 abas novas no admin (Igreja, Pastor, História), container de valores sugeridos removido de /contribua. 10 testes novos. Total: 69 testes. |
 | 2026-04-25 | 2.4 | Phase 8 (CMS backend) entregue: migration 002 (5 tabelas + bucket + RLS), `lib/cms.ts` com readers/writers + upload, admin reescrito pra usar banco em vez de localStorage, páginas públicas leem do banco com fallback nos defaults, AvisoBanner também. 15 testes novos pra `lib/cms`. Phases 5/6 ficam fundidas aqui (banco substitui ambas). Total: 59 testes. |
 | 2026-04-25 | 2.3 | Phase 4 (avisos globais) entregue: `<AvisoBanner>` + aba `/admin/avisos` + 12 testes RTL. Total: 44 testes passando. |
 | 2026-04-25 | 2.2 | Phase 3 marcada como ✅ ponta-a-ponta (bootstrap rodou, login funcionando local+prod). Documentado o redesign editorial (Fraunces+tokens). Documentado rename `middleware.ts → proxy.ts`. Notas sobre fix CRLF parser + upsert profile no bootstrap. |

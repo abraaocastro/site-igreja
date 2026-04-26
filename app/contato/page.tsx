@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2, Navigation, ExternalLink, MessageCircle } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
 import { toast } from 'sonner'
@@ -14,10 +14,22 @@ import {
   getMapsEmbedUrl,
   getMapsDirectionsUrl,
   getMapsSearchUrl,
+  type Church,
 } from '@/lib/site-data'
+import { getChurchEffective } from '@/lib/cms'
 
 export default function ContatoPage() {
-  const church = getChurch()
+  // Default sync (JSON) → useEffect substitui pelo Church efetivo (CMS overrides)
+  const [church, setChurch] = useState<Church>(() => getChurch())
+  useEffect(() => {
+    let cancelled = false
+    getChurchEffective().then((c) => {
+      if (!cancelled) setChurch(c)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const { endereco, contato, social } = church
   const [enderecoLine1, enderecoLine2] = formatAddressTwoLines(endereco)
   const phoneDisplay = formatPhone(contato.telefone)
