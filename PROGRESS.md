@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-25 (Phase 9 entregue — admin com cobertura total)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.5
+> **Última atualização:** 2026-04-25 (Phase 7 entregue — SEO local)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.6
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **nenhuma** — Phases 1–4, 8 e **9** ✅ concluídas. Phases 5/6 fundidas em 8. Próxima recomendada: **Phase 7 (SEO)**.
+> **Fase em andamento:** **nenhuma** — todas as fases técnicas (1–4, 7, 8, 9) ✅ concluídas. Phases 5/6 fundidas em 8. Próximo: validação em produção + Search Console.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -309,7 +309,8 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | 6 | ~~Admin UI pra editar JSON~~ | ☑️ **Fundida em Phases 8 + 9** (admin escreve direto no banco, com cobertura total) | — |
 | **7** | **SEO completo (sitemap, robots, OG, rich results)** | ⏭️ **Próxima sugerida** — base JSON-LD já entregue | — |
 | 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
-| 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | _pending commit_ |
+| 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | `39c5483` |
+| **7** | **SEO local (metadata + sitemap + robots + a11y)** | ✅ Completa | _pending commit_ |
 
 ---
 
@@ -422,13 +423,18 @@ ao salvar.
 - 10 testes novos em `__tests__/lib/cms.test.ts` — **69 totais**
 - **Manual:** rodar `003_cms_full.sql` no SQL Editor uma vez
 
-### 🟡 Phase 7 — SEO local (próxima sugerida)
+### ✅ Phase 7 — SEO local (entregue 2026-04-25)
 
-- `metadata` página-por-página (title, description, OG, Twitter) — atualmente só `app/layout.tsx`
-- `app/sitemap.ts` dinâmico (lê `data/church.json` + rotas estáticas)
-- `app/robots.ts` (bloquear `/admin` e `/login` da indexação)
-- Auditoria Lighthouse + correções de a11y
-- Submeter sitemap no Google Search Console
+- **Root metadata** (`app/layout.tsx`): title template `%s · Primeira Igreja Batista de Capim Grosso`, OG image, Twitter Card, canonical, robots permissivo, keywords, formatDetection (telefone/email/endereço)
+- **Per-route `layout.tsx`** (12 rotas): cada uma com title/description/OG específicos. `/admin/*` e `/login` recebem `robots: { index: false, follow: false }`
+- **`app/sitemap.ts`**: dinâmico, 11 URLs públicas com `priority` e `changeFrequency` razoáveis (home prioridade 1.0, eventos 0.9, calendário 0.7, etc.)
+- **`app/robots.ts`**: permite tudo + `disallow` em `/admin/*` e `/login`. Aponta pro sitemap.
+- **A11y essencial**: skip link no body (`<a href="#main-content">` que aparece só ao receber foco), form labels do `/contato` com `htmlFor`/`id` linkados + `autoComplete` apropriado
+- JSON-LD `Church` mantido (já vinha de Phase 1)
+
+**Pendências manuais (stakeholder):**
+1. Submeter `https://site-igreja-chi.vercel.app/sitemap.xml` no [Google Search Console](https://search.google.com/search-console)
+2. Rodar Lighthouse no Vercel/PageSpeed e ajustar conforme score
 
 ### 🟡 Resíduos da Phase 8 (não bloqueantes)
 

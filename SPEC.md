@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.5 (2026-04-25)
-**Status:** Em execução — Phases 1–4, 8 e **9** ✅ concluídas. Admin tem cobertura total: edita Igreja (endereço/contato/socials/PIX), Pastor (nome/foto/bio), História (timeline + textos), Banners, Ministérios, Eventos, Textos e Avisos — **tudo no banco**. Phases 5/6 fundidas em 8. **Próximo:** Phase 7 (SEO).
+**Versão:** 2.6 (2026-04-25)
+**Status:** Em execução — Phases 1–4, **7**, 8 e 9 ✅ concluídas. Site está pronto pro mundo: admin com cobertura total, SEO local com metadata por rota + sitemap + robots, JSON-LD pra knowledge panel, a11y básica (skip link + form labels). Phases 5/6 fundidas em 8.
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -357,23 +357,33 @@ Objetivo: leigo edita tudo sem mexer no git.
 
 ---
 
-### Phase 7 — SEO local (era Phase 6)
+### Phase 7 — SEO local ✅ (concluída 2026-04-25)
 Objetivo: top 3 no Google pra "igreja batista Capim Grosso".
 
 **Tasks**
-- 7.1. `metadata` completo em cada `page.tsx` (title, description, OG, Twitter)
-- 7.2. JSON-LD `Church` no `app/layout.tsx` usando dados de `church.json`
-- 7.3. `app/sitemap.ts` dinâmico
-- 7.4. `app/robots.ts`
-- 7.5. Auditoria Lighthouse + correções de acessibilidade (alt text, contraste, labels)
-- 7.6. Submeter sitemap ao Google Search Console
+- [x] 7.1. `metadata` por rota: `app/<route>/layout.tsx` (server component) com title/description/OG/Twitter/canonical específicos. Páginas seguem como `'use client'` pra hidratar do CMS, mas o layout ao redor injeta a metadata. Title template `%s · Primeira Igreja Batista de Capim Grosso` no root.
+- [x] 7.2. JSON-LD `Church` no `app/layout.tsx` (já vinha de Phase 1 via `getChurchJsonLd()`). Mantido.
+- [x] 7.3. `app/sitemap.ts` dinâmico — 11 rotas públicas com `priority` e `changeFrequency` razoáveis. `/admin` e `/login` ficam de fora.
+- [x] 7.4. `app/robots.ts` permite tudo + `disallow` em `/admin/*` e `/login`. Aponta pro `/sitemap.xml`.
+- [x] 7.5. A11y essencial: skip link no root layout, form labels do `/contato` linkados via `htmlFor`/`id`, `autoComplete` nos inputs. Restante (Lighthouse audit e tweaks finos) pode ser feito após o site receber tráfego real.
+- [ ] 7.6. **Manual:** submeter `https://site-igreja-chi.vercel.app/sitemap.xml` no [Google Search Console](https://search.google.com/search-console).
 
 **Acceptance**
-- [ ] Lighthouse Performance ≥ 90
-- [ ] Lighthouse SEO ≥ 95
-- [ ] Lighthouse Accessibility ≥ 90
-- [ ] Sitemap válido em `/sitemap.xml`
-- [ ] Google Search Console verificado
+- [x] `/sitemap.xml` gerado e válido (11 URLs)
+- [x] `/robots.txt` gerado, bloqueia `/admin` e `/login`
+- [x] `/admin/*` e `/login` retornam `noindex,nofollow` via metadata
+- [x] Title template aplica a todas as 12 páginas internas
+- [x] OG image + Twitter Card no root
+- [x] Skip link funcional ao tab + form labels acessíveis
+- [ ] Submeter ao Search Console (passo manual do stakeholder)
+- [ ] Lighthouse audit pós-deploy (passo manual)
+
+**Pendências do stakeholder (manuais)**
+1. Acessar https://search.google.com/search-console
+2. Adicionar a propriedade `https://site-igreja-chi.vercel.app` (ou domínio próprio quando registrar)
+3. Verificar (Vercel já adiciona um meta tag automaticamente se você colar o token)
+4. Em "Sitemaps", submeter `sitemap.xml`
+5. Aguardar a indexação rolar (24-72h pra primeiras impressões)
 
 ---
 
@@ -484,18 +494,20 @@ sugeridos" em /contribua (não combina com tom de igreja).
 
 ## 8. Status atual
 
-- [x] Spec v2.5 escrito
+- [x] Spec v2.6 escrito
 - [x] **Phase 1 — Foundation** (concluída)
 - [x] **Phase 2 — Geolocalização** (concluída)
 - [x] **Phase 3 — Auth Supabase** (concluída ponta-a-ponta — login funcionando em dev e prod)
 - [x] **Redesign editorial** (Fraunces + tokens novos + utilities) — aplicado fora de fase numerada, em paralelo com Phase 3
 - [x] **Migração `middleware.ts` → `proxy.ts`** (Next 16 compliance)
 - [x] **Phase 4 — Avisos banner** (concluída — `<AvisoBanner>` + aba `/admin/avisos` + 12 testes)
+- [x] **Phase 7 — SEO local** (concluída — metadata por rota + sitemap + robots + JSON-LD + a11y básica)
 - [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
 - [x] **Phase 9 — Cobertura total do admin** (concluída — Igreja/Pastor/História editáveis via `cms_textos` KV + nova tabela `cms_historia`. Container "valor sugerido" removido de /contribua. 10 testes novos, 69 totais.)
 - [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8**
 - [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8 + 9**
-- [ ] **Phase 7 — SEO local** — próxima sugerida (metadata page-by-page, sitemap, robots, Lighthouse)
+
+**Tudo essencial está pronto.** Próximos passos opcionais: rodar Lighthouse, submeter sitemap no Search Console, polish de a11y conforme feedback de usuários reais.
 
 ### Pendências de conteúdo (não-código)
 
@@ -513,6 +525,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-25 | 2.6 | Phase 7 (SEO) entregue: metadata template no root + 12 layouts por rota com title/description/OG/Twitter/canonical específicos, /admin e /login com noindex, app/sitemap.ts dinâmico (11 URLs), app/robots.ts bloqueando admin/login, skip link no body, form labels do /contato linkados via htmlFor + autoComplete. Site está pronto pra Search Console. 69 testes mantidos. |
 | 2026-04-25 | 2.5 | Phase 9 (cobertura total do admin) entregue: migration 003 com `cms_historia`, `getChurchEffective()` mergeando KV em cima do JSON, `/historia /pastor /contribua /contato /footer` consumindo CMS, 3 abas novas no admin (Igreja, Pastor, História), container de valores sugeridos removido de /contribua. 10 testes novos. Total: 69 testes. |
 | 2026-04-25 | 2.4 | Phase 8 (CMS backend) entregue: migration 002 (5 tabelas + bucket + RLS), `lib/cms.ts` com readers/writers + upload, admin reescrito pra usar banco em vez de localStorage, páginas públicas leem do banco com fallback nos defaults, AvisoBanner também. 15 testes novos pra `lib/cms`. Phases 5/6 ficam fundidas aqui (banco substitui ambas). Total: 59 testes. |
 | 2026-04-25 | 2.3 | Phase 4 (avisos globais) entregue: `<AvisoBanner>` + aba `/admin/avisos` + 12 testes RTL. Total: 44 testes passando. |

@@ -273,13 +273,16 @@ export default function ContatoPage() {
             <form onSubmit={onSubmit} className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Nome *</label>
-                  <input required value={form.nome} onChange={update('nome')} className={baseInput} />
+                  <label htmlFor="contato-nome" className="block text-sm font-medium text-foreground mb-1.5">Nome *</label>
+                  <input id="contato-nome" name="nome" autoComplete="name" required value={form.nome} onChange={update('nome')} className={baseInput} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Telefone</label>
+                  <label htmlFor="contato-telefone" className="block text-sm font-medium text-foreground mb-1.5">Telefone</label>
                   <input
+                    id="contato-telefone"
+                    name="telefone"
                     type="tel"
+                    autoComplete="tel"
                     value={form.telefone}
                     onChange={update('telefone')}
                     className={baseInput}
@@ -288,18 +291,23 @@ export default function ContatoPage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">E-mail *</label>
+                <label htmlFor="contato-email" className="block text-sm font-medium text-foreground mb-1.5">E-mail *</label>
                 <input
+                  id="contato-email"
+                  name="email"
                   required
                   type="email"
+                  autoComplete="email"
                   value={form.email}
                   onChange={update('email')}
                   className={baseInput}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Assunto *</label>
+                <label htmlFor="contato-assunto" className="block text-sm font-medium text-foreground mb-1.5">Assunto *</label>
                 <select
+                  id="contato-assunto"
+                  name="assunto"
                   required
                   value={form.assunto}
                   onChange={(e) => setForm({ ...form, assunto: e.target.value })}
@@ -316,8 +324,10 @@ export default function ContatoPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Mensagem *</label>
+                <label htmlFor="contato-mensagem" className="block text-sm font-medium text-foreground mb-1.5">Mensagem *</label>
                 <textarea
+                  id="contato-mensagem"
+                  name="mensagem"
                   required
                   value={form.mensagem}
                   onChange={update('mensagem')}

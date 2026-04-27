@@ -30,17 +30,73 @@ const jetbrains = JetBrains_Mono({
   display: 'swap',
 })
 
+// Base do site para resolver URLs relativas em metadata (OG image, alternates).
+// Em prod usa NEXT_PUBLIC_SITE_URL; fallback pra domínio Vercel atual.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://site-igreja-chi.vercel.app'
+
 export const metadata: Metadata = {
-  title: 'Primeira Igreja Batista de Capim Grosso',
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: 'Primeira Igreja Batista de Capim Grosso',
+    template: '%s · Primeira Igreja Batista de Capim Grosso',
+  },
   description:
-    'Bem-vindo à Primeira Igreja Batista de Capim Grosso. Uma comunidade de fé, amor e esperança. Venha nos conhecer!',
-  keywords: ['igreja batista', 'capim grosso', 'igreja evangélica', 'comunidade cristã', 'bahia', 'pibac'],
-  authors: [{ name: 'PIB Capim Grosso' }],
+    'Igreja Batista em Capim Grosso/BA. Cultos aos domingos 9h e 19h, quartas 19h30, sábados 19h30. Uma comunidade de fé, amor e esperança.',
+  keywords: [
+    'igreja batista',
+    'igreja batista capim grosso',
+    'pibac',
+    'capim grosso',
+    'igreja evangélica capim grosso',
+    'comunidade cristã',
+    'bahia',
+    'piemonte da diamantina',
+    'culto domingo capim grosso',
+    'pastor silas barreto',
+  ],
+  authors: [{ name: 'Primeira Igreja Batista de Capim Grosso' }],
+  creator: 'Primeira Igreja Batista de Capim Grosso',
+  publisher: 'Primeira Igreja Batista de Capim Grosso',
+  category: 'religion',
+  applicationName: 'PIBAC',
+  // Aplicado a páginas que não definirem o seu — admin/login sobrescrevem com noindex.
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
   openGraph: {
-    title: 'Primeira Igreja Batista de Capim Grosso',
-    description: 'Uma comunidade de fé, amor e esperança.',
-    locale: 'pt_BR',
     type: 'website',
+    locale: 'pt_BR',
+    url: siteUrl,
+    siteName: 'Primeira Igreja Batista de Capim Grosso',
+    title: 'Primeira Igreja Batista de Capim Grosso',
+    description:
+      'Uma comunidade de fé, amor e esperança em Capim Grosso/BA. Venha nos conhecer.',
+    images: [
+      {
+        url: '/logo.png',
+        width: 512,
+        height: 512,
+        alt: 'Primeira Igreja Batista de Capim Grosso',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Primeira Igreja Batista de Capim Grosso',
+    description:
+      'Uma comunidade de fé, amor e esperança em Capim Grosso/BA.',
+    images: ['/logo.png'],
+  },
+  alternates: {
+    canonical: siteUrl,
   },
   icons: {
     icon: [
@@ -49,13 +105,18 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-icon.png',
   },
+  // Útil pra PWA / mobile add-to-home (caso futuro). Sem manifest.json não faz mal.
+  manifest: undefined,
+  formatDetection: {
+    telephone: true,
+    email: true,
+    address: true,
+  },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   // JSON-LD Schema.org: ajuda o Google a entender a entidade (igreja + endereço +
   // pastor + redes sociais) e habilita o "knowledge panel" local.
-  // O siteUrl virá da env em produção; fallback pro domínio esperado.
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pibac.vercel.app'
   const jsonLd = getChurchJsonLd(siteUrl)
 
   return (
@@ -71,11 +132,18 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body className="font-sans antialiased min-h-screen flex flex-col">
+        {/* A11y: skip link só fica visível ao receber foco via teclado */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-2 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg"
+        >
+          Pular para o conteúdo principal
+        </a>
         <AuthProvider>
           {/* Banner global de avisos (Phase 4). Self-renderiza null se inativo. */}
           <AvisoBanner />
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">{children}</main>
           <Footer />
           <Toaster richColors position="top-right" />
         </AuthProvider>
