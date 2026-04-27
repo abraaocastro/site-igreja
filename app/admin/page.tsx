@@ -411,12 +411,29 @@ export default function AdminPage() {
 
 // ======================== Image upload helper ========================
 
+/**
+ * Hints padrão por tipo de imagem. Cada caso de uso passa o `hint` apropriado
+ * pra orientar o admin sobre dimensões e formato. Mantemos como constantes
+ * exportáveis pra reuso em forms diferentes (Pastor, Igreja/Logo, etc.).
+ */
+const IMAGE_HINTS = {
+  generic: 'Dica: imagens em PNG ou JPG. Mínimo 800px no lado maior.',
+  logo: 'PNG sem fundo (transparente). Quadrado, mínimo 256×256px. O ideal é 512×512px.',
+  banner: 'Imagem horizontal de alta resolução. Recomendado 1920×1080px (16:9). Mínimo 1280×720px.',
+  pastorFoto: 'Foto quadrada (1:1) com pessoa centralizada. Recomendado 1080×1080px. Aparece em formato circular.',
+  ministerio: 'Imagem horizontal (4:3 ou 16:9). Recomendado 1200×800px. Mínimo 800×600px.',
+  evento: 'Imagem horizontal (16:9 funciona melhor). Recomendado 1200×675px.',
+  historia: 'Imagem horizontal de contexto histórico. Recomendado 1200×800px.',
+} as const
+
 function ImageField({
   value,
   onChange,
+  hint = IMAGE_HINTS.generic,
 }: {
   value: string | null
   onChange: (v: string) => void
+  hint?: string
 }) {
   const [busy, setBusy] = useState(false)
 
@@ -469,6 +486,11 @@ function ImageField({
           }}
         />
       </label>
+      {hint && (
+        <p className="text-[11px] text-muted-foreground leading-relaxed pl-1">
+          {hint}
+        </p>
+      )}
     </div>
   )
 }
@@ -480,6 +502,8 @@ interface FieldDef {
   label: string
   type: 'text' | 'textarea' | 'image' | 'date' | 'time' | 'select'
   options?: string[]
+  /** Texto de orientação exibido abaixo do upload (apenas para type='image'). */
+  hint?: string
 }
 
 function FieldEditor({
@@ -513,7 +537,7 @@ function FieldEditor({
           ))}
         </select>
       ) : field.type === 'image' ? (
-        <ImageField value={value ?? null} onChange={onChange} />
+        <ImageField value={value ?? null} onChange={onChange} hint={field.hint} />
       ) : (
         <input
           type={field.type}
@@ -735,7 +759,7 @@ function BannersEditor({
       fields={[
         { key: 'title', label: 'Título', type: 'text' },
         { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
-        { key: 'imageUrl', label: 'Imagem', type: 'image' },
+        { key: 'imageUrl', label: 'Imagem do banner', type: 'image', hint: IMAGE_HINTS.banner },
         { key: 'buttonText', label: 'Texto do botão', type: 'text' },
         { key: 'link', label: 'Link', type: 'text' },
       ]}
@@ -776,7 +800,7 @@ function MinisteriosEditor({
         { key: 'leader', label: 'Líder', type: 'text' },
         { key: 'leaderInstagram', label: 'Instagram do líder (URL)', type: 'text' },
         { key: 'description', label: 'Descrição', type: 'textarea' },
-        { key: 'imageUrl', label: 'Imagem', type: 'image' },
+        { key: 'imageUrl', label: 'Imagem do ministério', type: 'image', hint: IMAGE_HINTS.ministerio },
       ]}
       makeNew={() => ({
         name: 'Novo ministério',
@@ -822,7 +846,7 @@ function EventosEditor({
           type: 'select',
           options: ['culto', 'estudo', 'batismo', 'encontro', 'escola', 'evento'],
         },
-        { key: 'imageUrl', label: 'Imagem', type: 'image' },
+        { key: 'imageUrl', label: 'Imagem do evento', type: 'image', hint: IMAGE_HINTS.evento },
       ]}
       makeNew={() => ({
         title: 'Novo evento',
@@ -1170,9 +1194,10 @@ const IGREJA_FIELDS: Array<{
   placeholder?: string
   group: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'
   type?: 'text' | 'textarea' | 'image'
+  hint?: string
 }> = [
   // Marca (logo + texto exibido no header/footer)
-  { group: 'marca', key: 'marcaLogo', label: 'Logotipo', type: 'image' },
+  { group: 'marca', key: 'marcaLogo', label: 'Logotipo', type: 'image', hint: IMAGE_HINTS.logo },
   { group: 'marca', key: 'marcaTituloPrincipal', label: 'Texto principal (header e footer)', placeholder: 'PIB Capim Grosso' },
   { group: 'marca', key: 'marcaSubtitulo', label: 'Texto secundário (linha de baixo)', placeholder: 'Desde 1978 · Bahia' },
   // Identidade
@@ -1288,6 +1313,7 @@ function IgrejaEditor({
                     <ImageField
                       value={draft[f.key] ?? ''}
                       onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
+                      hint={f.hint}
                     />
                   ) : (
                     <input
@@ -1409,10 +1435,8 @@ function PastorEditor({
         <ImageField
           value={draft.pastorFoto ?? ''}
           onChange={(v) => setDraft((d) => ({ ...d, pastorFoto: v }))}
+          hint={IMAGE_HINTS.pastorFoto}
         />
-        <p className="text-xs text-muted-foreground">
-          Recomendado: foto quadrada (1:1), ao menos 800×800px. O site exibe em formato circular.
-        </p>
       </div>
 
       {/* Identificação */}
@@ -1610,7 +1634,7 @@ function HistoriaEditor({
             { key: 'year', label: 'Ano (texto)', type: 'text' },
             { key: 'title', label: 'Título', type: 'text' },
             { key: 'description', label: 'Descrição', type: 'textarea' },
-            { key: 'imageUrl', label: 'Imagem', type: 'image' },
+            { key: 'imageUrl', label: 'Imagem do marco', type: 'image', hint: IMAGE_HINTS.historia },
             { key: 'sortOrder', label: 'Ordem (número, menor primeiro)', type: 'text' },
           ]}
           makeNew={() => ({

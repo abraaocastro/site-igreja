@@ -137,23 +137,28 @@ export function Header() {
         )}
       >
         <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Top">
-          <div className="flex h-16 md:h-20 items-center justify-between gap-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 group shrink-0">
-              <div className="relative h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary grid place-items-center overflow-hidden">
+          <div className="flex h-16 md:h-20 items-center justify-between gap-3">
+            {/* Logo — sem fundo, apenas a imagem */}
+            <Link href="/" className="flex items-center gap-3 group shrink-0 min-w-0">
+              <div className="relative h-10 w-10 md:h-11 md:w-11 shrink-0">
                 <Image
                   src={marca.logo}
                   alt={marca.tituloPrincipal}
                   fill
-                  sizes="48px"
-                  className="object-contain p-1.5"
+                  sizes="44px"
+                  className="object-contain"
                   priority
                   unoptimized={marca.logo.startsWith('http')}
                 />
               </div>
-              <div className="hidden sm:block leading-tight">
-                <p className="text-[15px] font-semibold text-foreground">{marca.tituloPrincipal}</p>
-                <p className="text-[11px] text-muted-foreground tracking-wider uppercase">{marca.subtitulo}</p>
+              {/* Texto da marca: aparece a partir de md, em xl ganha o subtítulo */}
+              <div className="hidden md:flex md:flex-col md:leading-tight min-w-0">
+                <p className="text-[14px] font-semibold text-foreground truncate">
+                  {marca.tituloPrincipal}
+                </p>
+                <p className="hidden xl:block text-[10px] text-muted-foreground tracking-wider uppercase truncate">
+                  {marca.subtitulo}
+                </p>
               </div>
             </Link>
 
@@ -225,24 +230,22 @@ export function Header() {
             </div>
 
             {/* Right side */}
-            <div className="flex items-center gap-2">
-              {/* Search trigger */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Search trigger — só ícone até 2xl, ganha rótulo "Buscar" no 2xl+ */}
               <button
                 onClick={() => setCmdOpen(true)}
-                className="hidden md:inline-flex items-center gap-2 h-9 pl-3 pr-2 rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground text-sm transition-colors"
-                aria-label="Buscar no site"
+                className="hidden md:inline-flex items-center gap-2 h-9 px-3 rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground text-sm transition-colors"
+                aria-label="Buscar no site (Ctrl K)"
+                title="Buscar (Ctrl K)"
               >
-                <Search className="h-3.5 w-3.5" />
-                <span className="hidden lg:inline">Buscar</span>
-                <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 h-5 text-[10px] font-mono text-muted-foreground">
-                  Ctrl K
-                </kbd>
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="hidden 2xl:inline whitespace-nowrap">Buscar</span>
               </button>
 
               {/* Theme toggle */}
               <button
                 onClick={toggleTheme}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors"
+                className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors shrink-0"
                 aria-label={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
                 title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
               >
@@ -253,15 +256,14 @@ export function Header() {
                 <div className="relative hidden md:block">
                   <button
                     onClick={() => setUserOpen((v) => !v)}
-                    className="flex items-center gap-2 pl-1 pr-3 h-9 rounded-full border border-border hover:bg-surface-2 transition-colors"
+                    className="flex items-center gap-1.5 pl-1 pr-2 h-9 rounded-full border border-border hover:bg-surface-2 transition-colors"
+                    aria-label={`Menu da conta (${displayName})`}
+                    title={displayName}
                   >
-                    <div className="h-7 w-7 rounded-full bg-brand-gradient-cyan flex items-center justify-center text-white text-xs font-bold">
+                    <div className="h-7 w-7 rounded-full bg-brand-gradient-cyan flex items-center justify-center text-white text-xs font-bold shrink-0">
                       {displayInitial}
                     </div>
-                    <span className="text-sm font-medium max-w-[120px] truncate">
-                      {displayName.split(' ')[0]}
-                    </span>
-                    <ChevronDown className={cn('h-4 w-4 transition-transform', userOpen && 'rotate-180')} />
+                    <ChevronDown className={cn('h-4 w-4 transition-transform shrink-0', userOpen && 'rotate-180')} />
                   </button>
                   {userOpen && (
                     <>
@@ -287,14 +289,19 @@ export function Header() {
                   )}
                 </div>
               ) : (
-                <Link href="/login" className="hidden md:inline-flex btn-ghost h-9 text-sm">
-                  <LogIn className="h-4 w-4" /> Entrar
+                <Link
+                  href="/login"
+                  className="hidden md:inline-flex btn-ghost h-9 text-sm whitespace-nowrap"
+                  aria-label="Entrar"
+                >
+                  <LogIn className="h-4 w-4 shrink-0" />
+                  <span className="hidden lg:inline">Entrar</span>
                 </Link>
               )}
 
               <Link
                 href="/contato"
-                className="hidden md:inline-flex btn-primary h-9 text-sm"
+                className="hidden md:inline-flex btn-primary h-9 text-sm whitespace-nowrap"
               >
                 Visite-nos
               </Link>
