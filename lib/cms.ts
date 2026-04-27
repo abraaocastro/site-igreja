@@ -371,6 +371,7 @@ export async function getHistoria(): Promise<CmsHistoriaEntry[]> {
  * Usada pelo admin pra renderizar os formulários "Igreja" e "Pastor".
  */
 export const CHURCH_TEXTOS_KEYS = {
+  marca: ['marcaLogo', 'marcaTituloPrincipal', 'marcaSubtitulo'] as const,
   igreja: ['igrejaNome', 'igrejaNomeCurto', 'igrejaSlogan'] as const,
   endereco: ['enderecoRua', 'enderecoNumero', 'enderecoBairro', 'enderecoCidade', 'enderecoEstado', 'enderecoCep'] as const,
   contato: ['contatoTelefone', 'contatoWhatsapp', 'contatoEmail'] as const,
@@ -379,6 +380,40 @@ export const CHURCH_TEXTOS_KEYS = {
   pix: ['pixChave', 'pixTipo', 'pixTitular'] as const,
   historia: ['historiaIntroTitulo', 'historiaIntroSubtitulo', 'historiaIntroTexto', 'historiaCitacao', 'historiaCitacaoRef', 'historiaCitacaoTexto'] as const,
 } as const
+
+/**
+ * Defaults da marca (logo + textos do logotipo). Usados no Header/Footer
+ * com fallback se admin ainda não personalizou.
+ */
+export const DEFAULT_MARCA = {
+  marcaLogo: '/logo.png',
+  marcaTituloPrincipal: 'PIB Capim Grosso',
+  marcaSubtitulo: 'Desde 1978 · Bahia',
+} as const
+
+/**
+ * Lê os 3 campos de marca já com fallback aos defaults. Conveniente pra
+ * Header/Footer que só querem esse subset (e não o `Church` inteiro).
+ */
+export async function getMarca(): Promise<{
+  logo: string
+  tituloPrincipal: string
+  subtitulo: string
+}> {
+  const textos = await getTextos()
+  return {
+    logo: pickMarca(textos['marcaLogo'], DEFAULT_MARCA.marcaLogo),
+    tituloPrincipal: pickMarca(textos['marcaTituloPrincipal'], DEFAULT_MARCA.marcaTituloPrincipal),
+    subtitulo: pickMarca(textos['marcaSubtitulo'], DEFAULT_MARCA.marcaSubtitulo),
+  }
+}
+
+function pickMarca(value: string | undefined, fallback: string): string {
+  if (value === undefined || value === null) return fallback
+  const trimmed = String(value).trim()
+  if (trimmed === '' || trimmed.toLowerCase() === 'null') return fallback
+  return trimmed
+}
 
 type AnyTextoKey =
   | (typeof CHURCH_TEXTOS_KEYS.igreja)[number]

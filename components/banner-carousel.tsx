@@ -50,7 +50,7 @@ export function BannerCarousel({ banners, variant = 'hero', autoplayDelay = 5000
   return (
     <div className={cn(
       'relative overflow-hidden select-none bg-background',
-      isHero ? 'h-[640px] md:h-[720px]' : 'h-[220px] md:h-[260px] rounded-2xl border border-border'
+      isHero ? 'h-auto min-h-[520px] md:h-[720px]' : 'h-[220px] md:h-[260px] rounded-2xl border border-border'
     )}>
       <div ref={emblaRef} className="h-full">
         <div className="flex h-full">

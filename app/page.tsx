@@ -95,8 +95,10 @@ export default function Home() {
       <section className="relative pt-6 md:pt-10">
         <BannerCarousel banners={heroBanners} variant="hero" />
 
-        {/* Service card flutuante */}
-        <div className="relative -mt-24 md:-mt-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
+        {/* Service card — flutua sobre o hero apenas no desktop. No mobile,
+            sentaria em cima da imagem do banner (que já está stackado abaixo do
+            texto), então o deixamos abaixo do carrossel. */}
+        <div className="relative mt-6 md:-mt-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
           <div className="rounded-2xl bg-surface border border-border shadow-xl shadow-primary/5 p-4 md:p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-destructive/10 text-destructive text-[11px] font-medium">
@@ -199,21 +201,23 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-5">
-              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-border bg-surface-3 ph-stripes">
+              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-border bg-brand-gradient">
                 <Image
                   src="/pastor-silas.png"
                   alt="Pr. Silas"
                   fill
                   sizes="(min-width: 1024px) 40vw, 100vw"
-                  className="object-cover"
+                  className="object-cover object-top"
                 />
-                <div className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 h-7 rounded-full bg-background/95 backdrop-blur border border-border text-[11px] font-medium">
+                {/* Gradiente garante contraste do texto branco no rodapé */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/75 via-black/30 to-transparent pointer-events-none" />
+                <div className="absolute top-4 left-4 inline-flex items-center gap-2 px-3 h-7 rounded-full bg-background/95 backdrop-blur border border-border text-[11px] font-medium text-foreground">
                   <span className="pulse-dot" /> Pastor Presidente
                 </div>
                 <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
                   <div className="text-white">
                     <div className="text-[11px] font-mono uppercase tracking-wider opacity-80">Liderando desde</div>
-                    <div className="display text-2xl">Pr. Silas Barreto</div>
+                    <div className="display text-2xl drop-shadow-md">Pr. Silas Barreto</div>
                   </div>
                 </div>
               </div>
@@ -407,7 +411,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl overflow-hidden border border-border bg-surface">
             <div className="grid lg:grid-cols-2">
-              <div className="relative min-h-[280px] lg:min-h-[440px] ph-stripes">
+              <div className="relative min-h-[280px] lg:min-h-[440px] bg-surface-2">
                 <div className="absolute inset-0 bg-cover bg-center"
                      style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&q=80)' }} />
                 <div className="absolute inset-0 bg-gradient-to-tr from-primary/60 via-primary/10 to-transparent" />

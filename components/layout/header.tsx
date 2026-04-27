@@ -6,9 +6,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import {
   Menu, X, ChevronDown, LogIn, LayoutDashboard, LogOut,
-  Search,
+  Search, Moon, Sun,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
+import { getMarca, DEFAULT_MARCA } from '@/lib/cms'
 import { cn } from '@/lib/utils'
 
 const navigation = [
@@ -43,6 +44,16 @@ export function Header() {
   const [userOpen, setUserOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [cmdOpen, setCmdOpen] = useState(false)
+  const [marca, setMarca] = useState<{
+    logo: string
+    tituloPrincipal: string
+    subtitulo: string
+  }>({
+    logo: DEFAULT_MARCA.marcaLogo,
+    tituloPrincipal: DEFAULT_MARCA.marcaTituloPrincipal,
+    subtitulo: DEFAULT_MARCA.marcaSubtitulo,
+  })
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const { user, profile, logout } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
@@ -59,6 +70,37 @@ export function Header() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // Hidrata marca do CMS (logo + nome customizáveis pelo admin)
+  useEffect(() => {
+    let cancelled = false
+    getMarca().then((m) => {
+      if (!cancelled) setMarca(m)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Tema: lê preferência do localStorage ou do sistema; aplica `.dark` no html
+  useEffect(() => {
+    const stored = window.localStorage.getItem('pibac-theme') as 'light' | 'dark' | null
+    const initial: 'light' | 'dark' =
+      stored ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    setTheme(initial)
+    document.documentElement.classList.toggle('dark', initial === 'dark')
+  }, [])
+
+  const toggleTheme = () => {
+    const next: 'light' | 'dark' = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.classList.toggle('dark', next === 'dark')
+    try {
+      window.localStorage.setItem('pibac-theme', next)
+    } catch {
+      // quota cheia/privacy mode — ignora
+    }
+  }
 
   useEffect(() => {
     setMobileOpen(false); setOpenDrop(null); setUserOpen(false); setCmdOpen(false)
@@ -100,17 +142,18 @@ export function Header() {
             <Link href="/" className="flex items-center gap-3 group shrink-0">
               <div className="relative h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary grid place-items-center overflow-hidden">
                 <Image
-                  src="/logo.png"
-                  alt="PIBAC"
+                  src={marca.logo}
+                  alt={marca.tituloPrincipal}
                   fill
                   sizes="48px"
                   className="object-contain p-1.5"
                   priority
+                  unoptimized={marca.logo.startsWith('http')}
                 />
               </div>
               <div className="hidden sm:block leading-tight">
-                <p className="text-[15px] font-semibold text-foreground">PIB Capim Grosso</p>
-                <p className="text-[11px] text-muted-foreground tracking-wider uppercase">Desde 1978 · Bahia</p>
+                <p className="text-[15px] font-semibold text-foreground">{marca.tituloPrincipal}</p>
+                <p className="text-[11px] text-muted-foreground tracking-wider uppercase">{marca.subtitulo}</p>
               </div>
             </Link>
 
@@ -192,8 +235,18 @@ export function Header() {
                 <Search className="h-3.5 w-3.5" />
                 <span className="hidden lg:inline">Buscar</span>
                 <kbd className="hidden lg:inline-flex items-center gap-0.5 rounded border border-border bg-background px-1.5 h-5 text-[10px] font-mono text-muted-foreground">
-                  ⌘K
+                  Ctrl K
                 </kbd>
+              </button>
+
+              {/* Theme toggle */}
+              <button
+                onClick={toggleTheme}
+                className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-border bg-surface hover:bg-surface-2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+                title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
+              >
+                {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </button>
 
               {user ? (
@@ -388,10 +441,13 @@ function CommandPalette({ onClose }: { onClose: () => void }) {
                 {group}
               </div>
               {arr.map((it) => (
-                <Link key={it.href} href={it.href} onClick={onClose}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm">
-                  <span>{it.title}</span>
-                  <span className="text-xs text-muted-foreground font-mono">{it.href}</span>
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  onClick={onClose}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl hover:bg-surface-2 text-sm"
+                >
+                  <span className="flex-1">{it.title}</span>
                 </Link>
               ))}
             </div>

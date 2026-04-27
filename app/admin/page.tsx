@@ -179,7 +179,7 @@ export default function AdminPage() {
             <div>
               <p className="text-xs uppercase tracking-wider opacity-70 mb-1">Painel de Conteúdo</p>
               <h1 className="text-2xl md:text-3xl font-serif font-bold">
-                Olá, {(profile?.nome || user.email?.split('@')[0] || 'admin').split(' ')[0]} 👋
+                Olá, {(profile?.nome || user.email?.split('@')[0] || 'admin').split(' ')[0]}
               </h1>
               <p className="opacity-80 mt-1 text-sm">
                 Tudo que você editar aqui é salvo no banco e fica visível pra todos os visitantes.
@@ -244,14 +244,17 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground">
-              <p className="font-medium mb-1">💡 Como funciona agora</p>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Tudo que você edita aqui é gravado direto no banco do Supabase
-                e aparece pros visitantes na hora seguinte (Vercel re-renderiza
-                ao primeiro acesso). Imagens sobem pro armazenamento público.
-                Não tem mais &quot;preview local&quot; — quando você salva, está no ar.
-              </p>
+            <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground flex gap-3">
+              <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium mb-1">Como funciona agora</p>
+                <p className="text-muted-foreground text-xs leading-relaxed">
+                  Tudo que você edita aqui é gravado direto no banco do Supabase
+                  e aparece pros visitantes na hora seguinte (Vercel re-renderiza
+                  ao primeiro acesso). Imagens sobem pro armazenamento público.
+                  Não tem mais &quot;preview local&quot; — quando você salva, está no ar.
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -1051,7 +1054,7 @@ function AvisosEditor({
           )}
         >
           <p className="text-xs text-muted-foreground">
-            {dirty ? '💾 Você tem alterações não salvas.' : '✓ Tudo salvo.'}
+            {dirty ? 'Você tem alterações não salvas.' : 'Tudo salvo.'}
           </p>
           <div className="flex gap-2">
             <button
@@ -1165,9 +1168,13 @@ const IGREJA_FIELDS: Array<{
   key: string
   label: string
   placeholder?: string
-  group: 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'
-  type?: 'text' | 'textarea'
+  group: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'
+  type?: 'text' | 'textarea' | 'image'
 }> = [
+  // Marca (logo + texto exibido no header/footer)
+  { group: 'marca', key: 'marcaLogo', label: 'Logotipo', type: 'image' },
+  { group: 'marca', key: 'marcaTituloPrincipal', label: 'Texto principal (header e footer)', placeholder: 'PIB Capim Grosso' },
+  { group: 'marca', key: 'marcaSubtitulo', label: 'Texto secundário (linha de baixo)', placeholder: 'Desde 1978 · Bahia' },
   // Identidade
   { group: 'identidade', key: 'igrejaNome', label: 'Nome completo', placeholder: 'Primeira Igreja Batista de Capim Grosso' },
   { group: 'identidade', key: 'igrejaNomeCurto', label: 'Nome curto', placeholder: 'PIBAC' },
@@ -1195,7 +1202,8 @@ const IGREJA_FIELDS: Array<{
   { group: 'pix', key: 'pixTitular', label: 'Titular da conta' },
 ]
 
-const IGREJA_GROUPS: Array<{ id: 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'; title: string; description: string }> = [
+const IGREJA_GROUPS: Array<{ id: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'; title: string; description: string }> = [
+  { id: 'marca', title: 'Logotipo e marca', description: 'Logo (PNG sem fundo recomendado) e textos do cabeçalho/rodapé.' },
   { id: 'identidade', title: 'Identidade', description: 'Como a igreja se chama e se apresenta.' },
   { id: 'endereco', title: 'Endereço', description: 'Onde fica fisicamente.' },
   { id: 'contato', title: 'Contato', description: 'Telefone, WhatsApp e e-mail oficial.' },
@@ -1269,15 +1277,27 @@ function IgrejaEditor({
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               {fields.map((f) => (
-                <div key={f.key} className={fields.length === 1 ? 'sm:col-span-2' : ''}>
+                <div
+                  key={f.key}
+                  className={
+                    f.type === 'image' || fields.length === 1 ? 'sm:col-span-2' : ''
+                  }
+                >
                   <label className="block text-xs font-medium text-foreground mb-1">{f.label}</label>
-                  <input
-                    type="text"
-                    value={draft[f.key] ?? ''}
-                    onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder}
-                    className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-                  />
+                  {f.type === 'image' ? (
+                    <ImageField
+                      value={draft[f.key] ?? ''}
+                      onChange={(v) => setDraft((d) => ({ ...d, [f.key]: v }))}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={draft[f.key] ?? ''}
+                      onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
+                      placeholder={f.placeholder}
+                      className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    />
+                  )}
                 </div>
               ))}
             </div>
@@ -1293,7 +1313,7 @@ function IgrejaEditor({
           )}
         >
           <p className="text-xs text-muted-foreground">
-            {dirty ? '💾 Você tem alterações não salvas.' : '✓ Tudo salvo.'}
+            {dirty ? 'Você tem alterações não salvas.' : 'Tudo salvo.'}
           </p>
           <button
             onClick={save}
@@ -1306,13 +1326,16 @@ function IgrejaEditor({
         </div>
       </div>
 
-      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground">
-        <p className="font-medium mb-1">💡 Como funciona</p>
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          Campos vazios usam o valor padrão de <code>data/church.json</code>. Pra remover de fato
-          algo (ex: WhatsApp), apague o conteúdo do campo e salve. O site cai pro padrão estático
-          (que pode ser <code>null</code>, ocultando o item).
-        </p>
+      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground flex gap-3">
+        <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+        <div>
+          <p className="font-medium mb-1">Como funciona</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Campos vazios usam o valor padrão de <code>data/church.json</code>. Pra remover de fato
+            algo (ex: WhatsApp), apague o conteúdo do campo e salve. O site cai pro padrão estático
+            (que pode ser <code>null</code>, ocultando o item).
+          </p>
+        </div>
       </div>
     </div>
   )
@@ -1435,7 +1458,7 @@ function PastorEditor({
           )}
         >
           <p className="text-xs text-muted-foreground">
-            {dirty ? '💾 Você tem alterações não salvas.' : '✓ Tudo salvo.'}
+            {dirty ? 'Você tem alterações não salvas.' : 'Tudo salvo.'}
           </p>
           <button
             onClick={save}

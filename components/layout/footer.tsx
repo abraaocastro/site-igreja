@@ -10,7 +10,7 @@ import {
   getChurch, formatAddressOneLine, formatPhone, telHref, mailtoHref, whatsappHref, getMapsDirectionsUrl,
   type Church,
 } from '@/lib/site-data'
-import { getChurchEffective } from '@/lib/cms'
+import { getChurchEffective, getMarca, DEFAULT_MARCA } from '@/lib/cms'
 
 const footerLinks = {
   igreja: [
@@ -36,10 +36,21 @@ export function Footer() {
   // Inicia com defaults do JSON (renderiza imediato no SSR / hidratação),
   // depois substitui pelo `Church` efetivo vindo do CMS.
   const [church, setChurch] = useState<Church>(() => getChurch())
+  const [marca, setMarca] = useState<{
+    logo: string
+    tituloPrincipal: string
+    subtitulo: string
+  }>({
+    logo: DEFAULT_MARCA.marcaLogo,
+    tituloPrincipal: DEFAULT_MARCA.marcaTituloPrincipal,
+    subtitulo: DEFAULT_MARCA.marcaSubtitulo,
+  })
   useEffect(() => {
     let cancelled = false
-    getChurchEffective().then((c) => {
-      if (!cancelled) setChurch(c)
+    Promise.all([getChurchEffective(), getMarca()]).then(([c, m]) => {
+      if (cancelled) return
+      setChurch(c)
+      setMarca(m)
     })
     return () => {
       cancelled = true
@@ -88,11 +99,18 @@ export function Footer() {
           <div className="lg:col-span-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative h-12 w-12 bg-white rounded-xl p-1.5 shrink-0">
-                <Image src="/logo.png" alt="PIBAC" fill sizes="48px" className="object-contain" />
+                <Image
+                  src={marca.logo}
+                  alt={marca.tituloPrincipal}
+                  fill
+                  sizes="48px"
+                  className="object-contain"
+                  unoptimized={marca.logo.startsWith('http')}
+                />
               </div>
               <div>
-                <p className="text-sm font-semibold leading-tight">Primeira Igreja Batista</p>
-                <p className="text-xs opacity-70 uppercase tracking-wider">Capim Grosso · Bahia</p>
+                <p className="text-sm font-semibold leading-tight">{marca.tituloPrincipal}</p>
+                <p className="text-xs opacity-70 uppercase tracking-wider">{marca.subtitulo}</p>
               </div>
             </div>
             <p className="text-sm opacity-75 mb-6 leading-relaxed max-w-sm">
