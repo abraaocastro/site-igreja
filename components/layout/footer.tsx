@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  MapPin, Phone, Mail, Clock, Facebook, Instagram, Youtube, Heart, Navigation, MessageCircle, ArrowUpRight,
+  MapPin, Phone, Mail, Clock, Facebook, Instagram, Youtube, Navigation, MessageCircle, ArrowUpRight,
 } from 'lucide-react'
 import {
   getChurch, formatAddressOneLine, formatPhone, telHref, mailtoHref, whatsappHref, getMapsDirectionsUrl,
@@ -178,9 +178,20 @@ export function Footer() {
           <p className="text-xs opacity-60">
             © {new Date().getFullYear()} Primeira Igreja Batista de Capim Grosso. Todos os direitos reservados.
           </p>
-          <p className="text-xs opacity-60 flex items-center gap-1.5">
-            Feito com <Heart className="h-3 w-3 fill-accent text-accent" /> para a obra do Senhor
-          </p>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="opacity-60">Produzido por</span>
+            <span className="font-medium opacity-90">Wise Tech Projects</span>
+            <a
+              href="https://www.instagram.com/wise.techprojects/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-accent hover:text-accent-foreground transition opacity-90 hover:opacity-100"
+              aria-label="Conhecer Wise Tech Projects no Instagram"
+            >
+              Conhecer
+              <ArrowUpRight className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
