@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.8 (2026-04-28)
-**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo agora com 8 frentes: 5 originais (convite users, calendar preview, plano leitura, multi-líderes, HelpHints) + 3 bugs reportados pelo stakeholder (10.6 contador inteligente, 10.7 botão Assistir configurável, 10.8 marquee de eventos da semana). HelpHint pronto, dev notes removidos. Próximo: executar tasks pendentes na ordem documentada.
+**Versão:** 2.9 (2026-04-28)
+**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo agora com **9 frentes**: 5 originais (convite users, calendar preview, plano leitura, multi-líderes, HelpHints) + 4 bugs reportados pelo stakeholder (10.6 contador inteligente, 10.7 botão Assistir configurável, 10.8 marquee de eventos da semana, 10.9 UUID de banner aparecendo no eyebrow). HelpHint pronto, dev notes removidos.
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -638,7 +638,53 @@ E o ícone `<Sparkles className="text-accent" />` (✨) que parece "IA generated
 - [ ] 10.8.c — Substituir `<Sparkles>` por `<Calendar className="h-3.5 w-3.5 text-accent" />` (ou remover totalmente, mantendo só bullet)
 - [ ] 10.8.d — Estado vazio: "Sem mais eventos esta semana"
 
-**Acceptance combinado (10.6 + 10.7 + 10.8)**
+#### 10.9. Pré-headline editável nos banners (bug visual reportado 28/04)
+
+**Sintoma reportado:** o eyebrow do banner mostra coisa tipo
+`03 · AA147C07-8C6B-4EDE-90B2-7320198AD875` em cima do título "Escola
+Bíblica Dominical". Visualmente terrível.
+
+**Causa raiz:** em `components/banner-carousel.tsx` linha 64:
+
+```tsx
+<div className="eyebrow mb-4">
+  {String(idx + 1).padStart(2, '0')} · {banner.id.toUpperCase()}
+</div>
+```
+
+O eyebrow concatena `índice` + `banner.id`. Antes da Phase 8, `id` era
+string curta (ex: `"hero-1"`, `"culto"`). Depois da migração pro CMS,
+`id` virou UUID gerado pelo Supabase (`gen_random_uuid()`). O UUID
+"vazou" pro design.
+
+**Fix proposto:**
+- Adicionar coluna `pre_headline text` (nullable) em `cms_banners`
+- Tipo `CmsBanner.preHeadline: string | null`
+- Admin tem novo campo **"Pré-headline (opcional)"** no `BannersEditor`,
+  antes do campo "Título" — limite ~50 chars
+- Frontend (`<BannerCarousel>`):
+  - Se `preHeadline` preenchida → renderiza eyebrow com esse texto
+  - Se vazia/null → **não renderiza o eyebrow** (em vez de mostrar UUID)
+  - O número sequencial `01/03/04` fica só no contador inferior direito do hero (que já tem `01/04` no canto da imagem) — sai do topo do título
+
+**Tasks**
+- [ ] 10.9.a — Migration 004 (ou nova): `alter table cms_banners add column pre_headline text;`
+- [ ] 10.9.b — Atualizar `CmsBanner` type, mapeadores `bannerFromRow`/`bannerToRow`, `DEFAULT_BANNERS` em `lib/cms.ts`
+- [ ] 10.9.c — `components/banner-carousel.tsx`: substituir eyebrow concatenado por:
+  ```tsx
+  {banner.preHeadline && (
+    <div className="eyebrow mb-4">{banner.preHeadline}</div>
+  )}
+  ```
+- [ ] 10.9.d — `BannersEditor` ganha o campo `preHeadline` no array de fields, posicionado antes de `title`. Hint: "Texto pequeno em CAPS que aparece acima do título. Deixe vazio pra ocultar." Limite 50 chars (`maxLength`).
+- [ ] 10.9.e — Tests: reader/writer cobrem novo campo + ausência (null)
+
+**Acceptance**
+- [ ] Banner com `preHeadline = null` → não mostra nada acima do título (zero UUID)
+- [ ] Banner com `preHeadline = "Domingos · 9h e 19h"` → mostra esse texto em CAPS pequenos acima do título
+- [ ] Admin pode editar/limpar o campo na aba Banners
+
+**Acceptance combinado (10.6 + 10.7 + 10.8 + 10.9)**
 - [ ] Cadastrar evento "Teste" pra daqui 30 min → contador grande mostra ~30 min
 - [ ] Quando faltar < 24h, contador mostra título do evento (ex: "BATISMO" no lugar de "PRÓXIMO CULTO")
 - [ ] Admin trocar URL do botão Assistir pra `https://youtube.com/live/...` → click abre nova aba
@@ -713,6 +759,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-28 | 2.9 | Phase 10 ganhou +1 frente (10.9): pré-headline editável em `cms_banners`. UUID estava vazando pro design via `banner.id.toUpperCase()` no eyebrow. Fix: nova coluna `pre_headline text` nullable + campo no admin + render condicional. |
 | 2026-04-28 | 2.8 | Phase 10 ganhou 3 frentes novas (10.6, 10.7, 10.8) a partir de bugs reportados pelo stakeholder: contador "próximo culto" hardcoded ignorando `cms_eventos`, botão "Assistir" sem URL configurável, marquee mostrando horários passados + ícone Sparkles ✨ que parece IA. Cada item tem causa raiz + fix proposto + tasks. |
 | 2026-04-26 | 2.7 | Phase 10 documentada (5 frentes: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover, HelpHints substituindo dev notes). HelpHint component criado, caixas "Como funciona" removidas, `CardsEditor` ganhou prop `help`. Restante a executar. |
 | 2026-04-25 | 2.6 | Phase 7 (SEO) entregue: metadata template no root + 12 layouts por rota com title/description/OG/Twitter/canonical específicos, /admin e /login com noindex, app/sitemap.ts dinâmico (11 URLs), app/robots.ts bloqueando admin/login, skip link no body, form labels do /contato linkados via htmlFor + autoComplete. Site está pronto pra Search Console. 69 testes mantidos. |

@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-28 (Phase 10 ganhou 3 bugs reportados pelo stakeholder)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.8
+> **Última atualização:** 2026-04-28 (Phase 10 ganhou +1 frente: pre-headline editável)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.9
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, agora com 8 frentes). HelpHint pronto + dev notes removidos. Próximos: ver checklist em SPEC §Phase 10.
+> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, **9 frentes**). HelpHint pronto + dev notes removidos. Próximos: ver checklist em SPEC §Phase 10.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -63,6 +63,10 @@
 #### 10.8. Marquee de horários da semana atual (bug reportado 28/04)
 **Problema:** marquee usa `horariosCultos` em loop infinito, sem filtrar passados. Mostra "Quarta 19:30" mesmo numa quinta. Usa ícone `<Sparkles>` (✨) que parece IA generated.
 **Fix:** mostrar só eventos da semana corrente ainda pendentes (combinar recorrentes expandidos + cms_eventos), trocar Sparkles por Calendar ou bullet, mostrar estado "Sem mais eventos esta semana" quando vazio. Detalhes na SPEC §10.8.
+
+#### 10.9. Pré-headline editável dos banners (bug visual reportado 28/04)
+**Problema:** eyebrow do banner mostra `03 · AA147C07-8C6B-4EDE-90B2-7320198AD875` em cima do título — UUID gerado pelo Supabase vazando pro design. Concatenação `index + banner.id.toUpperCase()` em `components/banner-carousel.tsx:64`.
+**Fix:** adicionar coluna `pre_headline text` nullable em `cms_banners`. Admin tem novo campo "Pré-headline (opcional)" no BannersEditor. Quando vazio, eyebrow some completamente. Detalhes na SPEC §10.9.
 
 ### 🔴 Pendências de ambiente / migrations
 1. **Rodar `003_cms_full.sql`** no Supabase (Phase 9, ainda pendente do user)
