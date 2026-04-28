@@ -74,6 +74,7 @@ import {
   type CmsHistoriaEntry,
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
+import { HelpHint } from '@/components/help-hint'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -244,18 +245,6 @@ export default function AdminPage() {
               ))}
             </div>
 
-            <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground flex gap-3">
-              <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium mb-1">Como funciona agora</p>
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  Tudo que você edita aqui é gravado direto no banco do Supabase
-                  e aparece pros visitantes na hora seguinte (Vercel re-renderiza
-                  ao primeiro acesso). Imagens sobem pro armazenamento público.
-                  Não tem mais &quot;preview local&quot; — quando você salva, está no ar.
-                </p>
-              </div>
-            </div>
           </div>
         )}
 
@@ -562,6 +551,7 @@ function CardsEditor<T extends { id: string }>({
   title,
   description,
   preview,
+  help,
 }: {
   items: T[]
   onCreate: (v: Omit<T, 'id'>) => Promise<void>
@@ -572,6 +562,8 @@ function CardsEditor<T extends { id: string }>({
   title: string
   description: string
   preview: (item: T) => { title: string; subtitle?: string; date?: string; time?: string; imageUrl?: string | null }
+  /** Conteúdo opcional pro popover de ajuda (?) ao lado do título. */
+  help?: { label: string; body: React.ReactNode }
 }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<T | null>(null)
@@ -626,8 +618,17 @@ function CardsEditor<T extends { id: string }>({
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-foreground">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          {title && (
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              {title}
+              {help && (
+                <HelpHint label={help.label} side="bottom">
+                  {help.body}
+                </HelpHint>
+              )}
+            </h2>
+          )}
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
         <button
           onClick={add}
@@ -1352,17 +1353,6 @@ function IgrejaEditor({
         </div>
       </div>
 
-      <div className="bg-accent/10 border border-accent/30 rounded-lg p-4 text-sm text-foreground flex gap-3">
-        <Info className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-        <div>
-          <p className="font-medium mb-1">Como funciona</p>
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Campos vazios usam o valor padrão de <code>data/church.json</code>. Pra remover de fato
-            algo (ex: WhatsApp), apague o conteúdo do campo e salve. O site cai pro padrão estático
-            (que pode ser <code>null</code>, ocultando o item).
-          </p>
-        </div>
-      </div>
     </div>
   )
 }

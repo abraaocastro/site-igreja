@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.6 (2026-04-25)
-**Status:** Em execução — Phases 1–4, **7**, 8 e 9 ✅ concluídas. Site está pronto pro mundo: admin com cobertura total, SEO local com metadata por rota + sitemap + robots, JSON-LD pra knowledge panel, a11y básica (skip link + form labels). Phases 5/6 fundidas em 8.
+**Versão:** 2.7 (2026-04-26)
+**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo definido (5 frentes), HelpHint pronto, dev notes removidos. Próximo: convite de usuários + multi-líderes + calendar preview + plano de leitura editável + popover de líderes.
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -469,6 +469,98 @@ sugeridos" em /contribua (não combina com tom de igreja).
 
 ---
 
+### Phase 10 — Refinos do admin (em execução, 2026-04-26)
+Objetivo: cobrir as últimas lacunas do painel pra que o admin não dependa
+do dev pra nada do dia-a-dia. Cinco frentes independentes:
+
+#### 10.1. Convite de novos usuários (admin → conteudista)
+- Nova aba **`Usuários`** em `/admin`, **visível apenas pra `role='admin'`** (filtro client-side baseado em `useAuth().profile.role`; backend reforça via service-role policy)
+- Form simples: e-mail + nome → POST em `/api/admin/users` (route handler server-side)
+- Server action usa `createAdminClient()` (service_role) pra:
+  1. `auth.admin.createUser({ email, password: random, email_confirm: true, user_metadata: { nome, must_change_password: true } })`
+  2. Promover via `update profiles set role = 'conteudista'` se necessário (a trigger já cria com 'conteudista' por padrão, então normalmente é no-op)
+- Listar usuários existentes (join `auth.users` ↔ `profiles`) com role + último login
+- Permitir **revogar acesso**: `auth.admin.deleteUser(id)` (com confirm dialog)
+- **Hierarquia:** conteudista vê todas as abas EXCETO `Usuários`. Admin vê tudo.
+- A senha gerada é exibida UMA VEZ no console + na tela de sucesso pro admin compartilhar com o convidado, que será forçado a trocar via fluxo `/admin/primeiro-acesso` já existente.
+
+#### 10.2. Calendar preview no EventosEditor
+- Mini-calendário (mês atual + nav de mês) renderizado dentro da aba `Eventos`, no topo da lista de eventos
+- Dias com eventos ganham um **dot colorido** (cor por categoria)
+- Clicar num dia filtra a lista pra mostrar só eventos daquele dia
+- Reaproveita lógica de `app/calendario/page.tsx` (já existe `parseLocalDate`, etc.) — extrair pra `lib/calendar-utils.ts`
+- Componente novo: `components/admin/calendar-preview.tsx`
+
+#### 10.3. Plano de leitura editável
+- Migration: `cms_plano_leitura (id uuid, dia int, livro text, capitulos text, tema text, sort_order int, created_at, updated_at)` com RLS no padrão dos outros (`is_cms_writer` escreve, anon lê)
+- Seed inicial a partir de `lib/data.ts#planoLeitura` (30 dias, Gênesis → Provérbios) via `WHERE NOT EXISTS`
+- `lib/cms.ts` ganha `getPlanoLeitura()`, `createPlanoLeitura()`, `upsertPlanoLeitura()`, `deletePlanoLeitura()` + tipo `CmsPlanoLeituraDay`
+- Nova aba `Plano de Leitura` no admin com CRUD via `CardsEditor` (mesmo pattern de banners/eventos/historia)
+- Refactor `app/plano-leitura/page.tsx` pra ler do DB com fallback aos defaults estáticos
+- Defaults removidos do `lib/data.ts` (ou mantidos só pro fallback como nos demais)
+
+#### 10.4. Múltiplos líderes por ministério
+- Schema: substituir colunas `leader text` + `leader_instagram text` em `cms_ministerios` por `leaders jsonb` no formato `[{ "name": "Lucas Barreto", "instagram": "https://..." }, ...]`
+- Migration faz **backfill**: linha existente vira array de 1 elemento com os dados antigos. Drop das colunas antigas só depois do backfill confirmado.
+- `lib/cms.ts`: `CmsMinisterio.leaders: Array<{ name: string; instagram: string | null }>`. Mantém compat lendo o array; se vier vazio cai pros defaults.
+- `MinisteriosEditor` no admin: lista dinâmica de líderes com botão `+ adicionar líder` e `×` por linha. Cada linha tem campos `nome` + `instagram` (opcional).
+- Frontend (`/ministerios` e card da home):
+  - Se 1 líder: mostra inline como hoje
+  - Se 2+ líderes: botão **"Liderança (N)"** que abre um popover (`<Popover>` simples, não modal) listando todos os nomes + ícones de Instagram clicáveis
+- Componente novo: `components/leaders-popover.tsx`
+
+#### 10.5. Notas dev → HelpHint icons
+- Componente `components/help-hint.tsx` (`?` circular + popover, fecha com Esc/click outside) — **já criado**
+- Remover as caixas "Como funciona" embutidas (eram pra mim, dev — cliente não precisa daquela explicação técnica)
+- Adicionar `HelpHint` ao lado de cada **título de aba** com texto curto e prático (ex: "Aviso ativo aparece no topo de todas as páginas. Mude a mensagem e ele reaparece pra quem já dispensou.")
+- Idem ao lado de campos não-óbvios (ex: `sortOrder`, `link interno vs externo`, `chave PIX`)
+- Tom: orientação curta pro usuário final, sem jargão técnico
+
+**Tasks (em ordem)**
+- [x] 10.5.a — `components/help-hint.tsx` criado
+- [x] 10.5.b — Remover as 2 caixas "Como funciona" do admin (overview + IgrejaEditor)
+- [x] 10.5.c — `CardsEditor` ganhou prop `help` opcional (renderiza `<HelpHint>` ao lado do título)
+- [ ] 10.5.d — Passar `help` em cada uso de `CardsEditor` (Banners, Ministérios, Eventos, História)
+- [ ] 10.5.e — Adicionar `<HelpHint>` em IgrejaEditor, PastorEditor, AvisosEditor, TextosEditor
+- [ ] 10.4.a — Migration 004: `leaders jsonb` em `cms_ministerios` + backfill + drop antigas
+- [ ] 10.4.b — `lib/cms` types + readers + writers atualizados
+- [ ] 10.4.c — `MinisteriosEditor`: lista dinâmica de líderes com `+`/`×`
+- [ ] 10.4.d — `components/leaders-popover.tsx` + uso em `/ministerios` e card da home
+- [ ] 10.3.a — Migration 004 (mesmo arquivo): `cms_plano_leitura` + RLS + seeds
+- [ ] 10.3.b — `lib/cms` adiciona getters/setters do plano de leitura
+- [ ] 10.3.c — Aba `Plano de Leitura` no admin via `CardsEditor`
+- [ ] 10.3.d — Refactor `app/plano-leitura/page.tsx` pra ler do DB
+- [ ] 10.2.a — Extrair `parseLocalDate` etc. pra `lib/calendar-utils.ts`
+- [ ] 10.2.b — `components/admin/calendar-preview.tsx`
+- [ ] 10.2.c — Inserir no topo do `EventosEditor` com filtro por dia
+- [ ] 10.1.a — `app/api/admin/users/route.ts` (POST cria, GET lista, DELETE revoga) usando `createAdminClient`
+- [ ] 10.1.b — Nova aba `Usuários` no admin, gated por `profile.role === 'admin'`
+- [ ] 10.1.c — Form de convite + lista de usuários + botão revogar
+- [ ] 10.1.d — Tela de sucesso mostra senha gerada uma única vez
+- [ ] Tests: cobertura mínima dos novos readers/writers + role gating
+- [ ] Verificação: typecheck + tests + build
+- [ ] Atualizar SPEC.md/PROGRESS.md/SPECDESIGN.md
+
+**Acceptance**
+- [ ] Admin (`dammabelmont@gmail.com`) vê 11 abas no painel; conteudista convidado vê 10 (sem `Usuários`)
+- [ ] Conteudista convidado loga com a senha gerada → cai em `/admin/primeiro-acesso` → escolhe nova senha → entra no painel sem aba Usuários
+- [ ] Calendário no EventosEditor destaca dias com eventos. Clicar filtra.
+- [ ] `/plano-leitura` lê do DB. Editar dia 5 no admin → reflete no site.
+- [ ] Editar ministério "Homens" pra ter Welder + Vitor → frontend mostra "Liderança (2)". Clicar abre popover com os 2 nomes + Instagrams.
+- [ ] Cliques no `?` ao lado de cada aba abrem balão explicativo curto e claro pra leigo.
+
+**Manual setup**
+1. Rodar `supabase/migrations/004_*.sql` no SQL Editor (cobre 10.3 + 10.4)
+2. (Opcional) Vercel: nada novo de env — service_role já está configurado da Phase 3
+
+**Fora de escopo da Phase 10**
+- Recuperação de senha por e-mail (Supabase tem nativo, vira fase futura)
+- Analytics/auditoria de quem editou o quê
+- Drag-and-drop pra reordenar items (continua via campo `sort_order` numérico)
+- Workflow de aprovação (admin revisa antes de publicar)
+
+---
+
 ## 6. Riscos e decisões arquiteturais
 
 | Risco | Mitigação |
@@ -494,7 +586,7 @@ sugeridos" em /contribua (não combina com tom de igreja).
 
 ## 8. Status atual
 
-- [x] Spec v2.6 escrito
+- [x] Spec v2.7 escrito
 - [x] **Phase 1 — Foundation** (concluída)
 - [x] **Phase 2 — Geolocalização** (concluída)
 - [x] **Phase 3 — Auth Supabase** (concluída ponta-a-ponta — login funcionando em dev e prod)
@@ -504,10 +596,11 @@ sugeridos" em /contribua (não combina com tom de igreja).
 - [x] **Phase 7 — SEO local** (concluída — metadata por rota + sitemap + robots + JSON-LD + a11y básica)
 - [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
 - [x] **Phase 9 — Cobertura total do admin** (concluída — Igreja/Pastor/História editáveis via `cms_textos` KV + nova tabela `cms_historia`. Container "valor sugerido" removido de /contribua. 10 testes novos, 69 totais.)
+- [ ] **Phase 10 — Refinos do admin** (em execução — convite de usuários, calendar preview, plano de leitura editável, multi-líderes, HelpHints. HelpHint component + remoção de dev notes já feitos.)
 - [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8**
 - [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8 + 9**
 
-**Tudo essencial está pronto.** Próximos passos opcionais: rodar Lighthouse, submeter sitemap no Search Console, polish de a11y conforme feedback de usuários reais.
+**MVP em produção, Phase 10 em curso.** Após 10 estará 100% completo pelo plano original (e algumas extensões). Próximos passos opcionais pós-10: recuperação de senha, analytics, drag-and-drop pra reordenar.
 
 ### Pendências de conteúdo (não-código)
 
@@ -525,6 +618,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-26 | 2.7 | Phase 10 documentada (5 frentes: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover, HelpHints substituindo dev notes). HelpHint component criado, caixas "Como funciona" removidas, `CardsEditor` ganhou prop `help`. Restante a executar. |
 | 2026-04-25 | 2.6 | Phase 7 (SEO) entregue: metadata template no root + 12 layouts por rota com title/description/OG/Twitter/canonical específicos, /admin e /login com noindex, app/sitemap.ts dinâmico (11 URLs), app/robots.ts bloqueando admin/login, skip link no body, form labels do /contato linkados via htmlFor + autoComplete. Site está pronto pra Search Console. 69 testes mantidos. |
 | 2026-04-25 | 2.5 | Phase 9 (cobertura total do admin) entregue: migration 003 com `cms_historia`, `getChurchEffective()` mergeando KV em cima do JSON, `/historia /pastor /contribua /contato /footer` consumindo CMS, 3 abas novas no admin (Igreja, Pastor, História), container de valores sugeridos removido de /contribua. 10 testes novos. Total: 69 testes. |
 | 2026-04-25 | 2.4 | Phase 8 (CMS backend) entregue: migration 002 (5 tabelas + bucket + RLS), `lib/cms.ts` com readers/writers + upload, admin reescrito pra usar banco em vez de localStorage, páginas públicas leem do banco com fallback nos defaults, AvisoBanner também. 15 testes novos pra `lib/cms`. Phases 5/6 ficam fundidas aqui (banco substitui ambas). Total: 59 testes. |

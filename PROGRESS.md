@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-25 (Phase 7 entregue — SEO local)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.6
+> **Última atualização:** 2026-04-26 (Phase 10 escopada e iniciada)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.7
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **nenhuma** — todas as fases técnicas (1–4, 7, 8, 9) ✅ concluídas. Phases 5/6 fundidas em 8. Próximo: validação em produção + Search Console.
+> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução). HelpHint component pronto + dev notes removidos. Próximos: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -17,35 +17,54 @@
 
 ---
 
-## 🎯 Próximos passos (atualizado 2026-04-25)
+## 🎯 Próximos passos (atualizado 2026-04-26)
 
-### 🔴 Bloqueio pra "site 100% pronto pro mundo"
-1. **Rodar `supabase/migrations/003_cms_full.sql`** no SQL Editor do Supabase (cria a tabela `cms_historia` necessária pra Phase 9).
-2. **Validar o CMS em produção** — entrar em `/admin`, testar todas as 9 abas (Visão Geral, Avisos, **Igreja**, **Pastor**, **História**, Banners, Ministérios, Eventos, Textos), salvar mudanças, ver aparecer no site público.
-3. **Preencher conteúdo TODO via /admin → Igreja** (sem dev, agora):
-   - Aba **Igreja → Contato → E-mail**: e-mail oficial da secretaria
-   - Aba **Igreja → PIX → Chave**: chave PIX da tesouraria
-   - Aba **Pastor → Foto/Bio**: foto/bio reais
-4. **Trocar fotos Unsplash por fotos reais** via /admin → Banners/Ministérios/Eventos/História.
+### 🟡 Phase 10 — Refinos do admin (em execução)
 
-> Os campos de e-mail e PIX agora ficam no banco (`cms_textos` KV). `data/church.json` continua sendo o fallback estático/SSR mas o admin não precisa mais comitar JSON pra mudar.
+5 frentes independentes (detalhes em SPEC.md §Phase 10):
 
-### 🟡 Phase 7 — SEO local (próxima fase técnica)
+#### 10.1. Convite de novos usuários (admin → conteudista)
+- Aba `Usuários` em `/admin`, **só pra `role='admin'`**
+- API route `app/api/admin/users/route.ts` (POST/GET/DELETE) usando service-role
+- Conteudista vê todas as abas EXCETO `Usuários`
+- Senha gerada exibida 1× no console + tela; convidado é forçado a trocar via `/admin/primeiro-acesso`
 
-Tudo **acrescenta**, sem reescrever nada do que já existe:
-- `metadata` por página (title, description, Open Graph, Twitter Card) — atualmente só `app/layout.tsx` tem genérico
-- `app/sitemap.ts` dinâmico (lê `data/church.json` + rotas estáticas)
-- `app/robots.ts` (bloquear `/admin` e `/login` da indexação)
-- Auditoria Lighthouse + correções de acessibilidade (alt text, contraste, labels)
-- Submeter sitemap no Google Search Console (ação manual do stakeholder)
+#### 10.2. Calendar preview no EventosEditor
+- Mini-calendário com dots por categoria, clique filtra eventos do dia
+- Componente novo `components/admin/calendar-preview.tsx`
+- `lib/calendar-utils.ts` extraído (reusa lógica de `app/calendario/page.tsx`)
 
-Estimativa: 1-2 sessões. Sem dependência de stakeholder além do Search Console no fim.
+#### 10.3. Plano de leitura editável
+- Migration: `cms_plano_leitura` (dia/livro/capitulos/tema/sort_order)
+- Seed das 30 entradas de `lib/data.ts#planoLeitura`
+- Aba `Plano de Leitura` no admin via `CardsEditor`
+- `app/plano-leitura/page.tsx` lê do DB com fallback
 
-### 🟢 Resíduos da Phase 8 (não bloqueantes — fazer quando precisar)
-- API route `/api/admin/invite-conteudista` pra admin convidar conteudistas pelo painel (hoje precisa rodar `bootstrap-admin` ou criar via Supabase Dashboard)
-- UI de recuperação de senha por e-mail (Supabase tem nativo, falta tela)
-- Server actions + `revalidatePath` (hoje é client-side; funciona, mas perde benefícios de SSR)
+#### 10.4. Múltiplos líderes por ministério
+- Migration: trocar `leader text + leader_instagram text` por `leaders jsonb` `[{name, instagram}]`
+- Backfill (linha existente vira array de 1)
+- `MinisteriosEditor`: lista dinâmica com `+/×`
+- `components/leaders-popover.tsx` no front: 1 líder = inline; 2+ = botão "Liderança (N)" abre popover
+
+#### 10.5. Notas dev → HelpHints (✅ parcialmente feito)
+- ✅ `components/help-hint.tsx` (`?` circular + popover, fecha com Esc/click outside)
+- ✅ Removidas as 2 caixas "Como funciona" do admin (Visão Geral + Igreja)
+- ✅ `CardsEditor` ganhou prop `help` opcional
+- ⏳ Passar `help` pra cada uso de `CardsEditor` + adicionar HelpHints em editores que não usam CardsEditor (Igreja, Pastor, Avisos, Textos)
+
+### 🔴 Pendências de ambiente / migrations
+1. **Rodar `003_cms_full.sql`** no Supabase (Phase 9, ainda pendente do user)
+2. **Rodar `004_*.sql`** assim que estiver pronta (Phase 10.3 + 10.4)
+3. Validar o CMS em produção em todas as abas
+4. Preencher e-mail oficial + chave PIX via `/admin → Igreja`
+5. Trocar fotos Unsplash por reais via /admin
+
+### 🟢 Pós-Phase 10 (backlog não-bloqueante)
+- Recuperação de senha por e-mail (UI; backend Supabase tem nativo)
+- Server actions + `revalidatePath` (hoje tudo client-side)
 - Cleanup de imagens órfãs no bucket quando admin troca a foto
+- Drag-and-drop pra reordenar items (continua via campo numérico)
+- Auditoria de quem editou o quê
 
 ### 🔵 Design v1 → v2 nas páginas internas
 Páginas que ainda usam o design "v1" (não receberam o redesign Fraunces de 2026-04-24): `/quem-somos`, `/historia`, `/visao`, `/pastor`, `/ministerios`, `/eventos`, `/calendario`, `/plano-leitura`, `/contribua`, `/contato`, `/login`, `/admin`. Header/Footer/SectionTitle já redesenhados, então a estética está consistente o suficiente; aplicar o redesign editorial nelas é trabalho do Claude Design quando houver tempo.
@@ -310,7 +329,8 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | **7** | **SEO completo (sitemap, robots, OG, rich results)** | ⏭️ **Próxima sugerida** — base JSON-LD já entregue | — |
 | 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
 | 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | `39c5483` |
-| **7** | **SEO local (metadata + sitemap + robots + a11y)** | ✅ Completa | _pending commit_ |
+| 7 | SEO local (metadata + sitemap + robots + a11y) | ✅ Completa | `a2c9a79` |
+| **10** | **Refinos do admin (convite users + calendar preview + plano leitura + multi-líderes + HelpHints)** | 🔄 **Em execução** — HelpHint + dev notes removidos prontos | parcial pending commit |
 
 ---
 
