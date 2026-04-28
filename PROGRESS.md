@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-26 (Phase 10 escopada e iniciada)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.7
+> **Última atualização:** 2026-04-28 (Phase 10 ganhou 3 bugs reportados pelo stakeholder)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.8
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução). HelpHint component pronto + dev notes removidos. Próximos: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover.
+> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, agora com 8 frentes). HelpHint pronto + dev notes removidos. Próximos: ver checklist em SPEC §Phase 10.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -51,6 +51,18 @@
 - ✅ Removidas as 2 caixas "Como funciona" do admin (Visão Geral + Igreja)
 - ✅ `CardsEditor` ganhou prop `help` opcional
 - ⏳ Passar `help` pra cada uso de `CardsEditor` + adicionar HelpHints em editores que não usam CardsEditor (Igreja, Pastor, Avisos, Textos)
+
+#### 10.6. Contador "Próximo culto" inteligente (bug reportado 28/04)
+**Problema:** `useNextService()` em `app/page.tsx` é hardcoded pra "próximo domingo 19h" — ignora `cms_eventos` totalmente. Stakeholder cadastrou evento pra hoje em 30 min, contador continuou mostrando ~5 dias.
+**Fix:** novo helper `lib/next-event.ts` que combina horários recorrentes + eventos especiais e retorna o mais próximo. Detalhes na SPEC §10.6.
+
+#### 10.7. Botão "Assistir" configurável (bug reportado 28/04)
+**Problema:** botão hardcoded `<Link href="/eventos">`, não dá pra apontar pra YouTube live ou similar.
+**Fix:** chaves `botaoAssistirUrl`, `botaoAssistirRotulo`, `botaoAssistirAoVivo` em `cms_textos`. Detalhes na SPEC §10.7.
+
+#### 10.8. Marquee de horários da semana atual (bug reportado 28/04)
+**Problema:** marquee usa `horariosCultos` em loop infinito, sem filtrar passados. Mostra "Quarta 19:30" mesmo numa quinta. Usa ícone `<Sparkles>` (✨) que parece IA generated.
+**Fix:** mostrar só eventos da semana corrente ainda pendentes (combinar recorrentes expandidos + cms_eventos), trocar Sparkles por Calendar ou bullet, mostrar estado "Sem mais eventos esta semana" quando vazio. Detalhes na SPEC §10.8.
 
 ### 🔴 Pendências de ambiente / migrations
 1. **Rodar `003_cms_full.sql`** no Supabase (Phase 9, ainda pendente do user)

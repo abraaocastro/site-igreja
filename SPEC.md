@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.7 (2026-04-26)
-**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo definido (5 frentes), HelpHint pronto, dev notes removidos. Próximo: convite de usuários + multi-líderes + calendar preview + plano de leitura editável + popover de líderes.
+**Versão:** 2.8 (2026-04-28)
+**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo agora com 8 frentes: 5 originais (convite users, calendar preview, plano leitura, multi-líderes, HelpHints) + 3 bugs reportados pelo stakeholder (10.6 contador inteligente, 10.7 botão Assistir configurável, 10.8 marquee de eventos da semana). HelpHint pronto, dev notes removidos. Próximo: executar tasks pendentes na ordem documentada.
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -553,11 +553,106 @@ do dev pra nada do dia-a-dia. Cinco frentes independentes:
 1. Rodar `supabase/migrations/004_*.sql` no SQL Editor (cobre 10.3 + 10.4)
 2. (Opcional) Vercel: nada novo de env — service_role já está configurado da Phase 3
 
+#### 10.6. Contador "Próximo culto" inteligente (bug do usuário, 2026-04-28)
+
+**Sintoma reportado:** admin cadastrou evento pra hoje 28/04/2026 às 19:30
+(eram 19:03). Contador continuou marcando ~5 dias / 23 horas, ignorando
+o evento iminente.
+
+**Causa raiz:** `useNextService()` em `app/page.tsx` é **hardcoded** pra
+calcular "próximo domingo às 19h":
+
+```ts
+const daysToSunday = (7 - now.getDay()) % 7
+next.setDate(now.getDate() + daysToSunday)
+next.setHours(19, 0, 0, 0)
+```
+
+Ignora completamente `cms_eventos` e os horários recorrentes em
+`horariosCultos` (que tem Qua 19:30, Sáb 19:30 também). Resultado: o
+contador é decorativo, não funcional.
+
+**Fix proposto:**
+- Renomear `useNextService()` → `useNextEvent()`
+- Combinar 2 fontes:
+  - **Recorrentes** (de `cms_textos` ou nova tabela `cms_horarios_cultos`):
+    expandir cada entrada (`Domingo 09:00`, `Domingo 19:00`, `Quarta 19:30`, `Sábado 19:30`)
+    pras próximas N ocorrências (calcular datetime real)
+  - **Especiais** (de `cms_eventos`): pegar todos cuja `date+time` >= now
+- Sortear todos por datetime ascendente
+- Pegar o primeiro
+- Se o evento for nas próximas 24h, mostrar título do evento ao invés de "PRÓXIMO CULTO"
+
+**Tasks**
+- [ ] 10.6.a — Migração de `lib/data.ts#horariosCultos` pra tabela `cms_horarios` ou `cms_textos` KV (cada linha vira `horarioDom1`, `horarioDom2`, etc.) — decidir formato no momento de implementar
+- [ ] 10.6.b — Helper `lib/next-event.ts` que combina recorrentes + eventos especiais e retorna o `Date` do mais próximo, junto com `title`
+- [ ] 10.6.c — Refatorar `useNextService()` em `app/page.tsx` pra usar o helper
+- [ ] 10.6.d — Mostrar título do evento (ex: "Culto de Celebração", "Batismo") em vez de "PRÓXIMO CULTO" quando faltar < 24h
+- [ ] 10.6.e — Tests unitários do helper cobrindo: nenhum evento, só recorrente, só especial, ambos, evento iminente, evento já passou
+
+#### 10.7. Botão "Assistir" configurável (link do YouTube/Live)
+
+**Hoje:** botão hardcoded `<Link href="/eventos">` em `app/page.tsx`. Não dá pro
+admin apontar pra live do YouTube ou outra URL externa sem mexer no código.
+
+**Fix proposto:**
+- Adicionar 2 chaves novas em `cms_textos`: `botaoAssistirUrl` e `botaoAssistirRotulo`
+- Defaults: `/eventos` e `Assistir`
+- Quando URL é externa (começa com `http`), abrir em nova aba (`target="_blank" rel="noreferrer"`)
+- Aba **Igreja → Marca** (ou nova subseção "Hero") no admin tem campos pra editar
+- Bonus: campo "ao vivo agora?" — quando ligado, botão fica `bg-destructive` com pulse animado pra chamar atenção
+
+**Tasks**
+- [ ] 10.7.a — Adicionar `botaoAssistirUrl`, `botaoAssistirRotulo`, `botaoAssistirAoVivo` em `CHURCH_TEXTOS_KEYS`
+- [ ] 10.7.b — `app/page.tsx`: ler do CMS via `getTextos()` e renderizar o link com target dinâmico
+- [ ] 10.7.c — Subseção "Botão Assistir" no IgrejaEditor (ou nova aba "Home/Hero")
+- [ ] 10.7.d — Tratamento visual: animação pulse + cor destrutive quando `aoVivo === true`
+
+#### 10.8. Marquee de horários — eventos da semana atual + remover ícone Sparkles
+
+**Sintoma:** marquee mostra os 4 horários recorrentes em loop infinito
+(`[...horariosCultos, ...horariosCultos]`), sem filtrar:
+- Eventos que **já passaram** nessa semana (ex: hoje é quinta — deveria ocultar
+  o "Quarta 19:30")
+- Eventos só desta **semana corrente** — não tem noção de "essa semana"
+
+E o ícone `<Sparkles className="text-accent" />` (✨) que parece "IA generated".
+
+**Fix proposto:**
+- Substituir loop estático por: **expandir** os horários recorrentes pras
+  ocorrências reais da semana corrente (segunda 00:00 → domingo 23:59) +
+  juntar com `cms_eventos` da semana
+- Filtrar `datetime > now`
+- Sortear ascendente
+- Se a lista vier curta (ex: domingo 22h, só sobrou nada), o marquee pode
+  mostrar uma linha "Sem mais eventos esta semana — veja todos em /eventos"
+- Trocar `<Sparkles>` por `<Calendar>` ou ícone neutro (ou remover o ícone
+  e usar só um bullet `•`)
+- Reaproveitar o helper `lib/next-event.ts` da 10.6 (mesma lógica de
+  expandir recorrentes)
+
+**Tasks**
+- [ ] 10.8.a — Helper `lib/week-events.ts` (ou export do mesmo `next-event.ts`)
+  que retorna lista de eventos pendentes da semana corrente, ordenados
+- [ ] 10.8.b — Refatorar marquee em `app/page.tsx` pra consumir o helper
+- [ ] 10.8.c — Substituir `<Sparkles>` por `<Calendar className="h-3.5 w-3.5 text-accent" />` (ou remover totalmente, mantendo só bullet)
+- [ ] 10.8.d — Estado vazio: "Sem mais eventos esta semana"
+
+**Acceptance combinado (10.6 + 10.7 + 10.8)**
+- [ ] Cadastrar evento "Teste" pra daqui 30 min → contador grande mostra ~30 min
+- [ ] Quando faltar < 24h, contador mostra título do evento (ex: "BATISMO" no lugar de "PRÓXIMO CULTO")
+- [ ] Admin trocar URL do botão Assistir pra `https://youtube.com/live/...` → click abre nova aba
+- [ ] Botão Assistir com `aoVivo=true` fica vermelho pulsante
+- [ ] Numa quarta 22h, marquee não mostra mais "Quarta 19:30"
+- [ ] Marquee no domingo 22h mostra "Sem mais eventos esta semana"
+- [ ] Sparkles (✨) não aparece em nenhum lugar do site
+
 **Fora de escopo da Phase 10**
 - Recuperação de senha por e-mail (Supabase tem nativo, vira fase futura)
 - Analytics/auditoria de quem editou o quê
 - Drag-and-drop pra reordenar items (continua via campo `sort_order` numérico)
 - Workflow de aprovação (admin revisa antes de publicar)
+- Notificação push pra "evento começa em 5 min"
 
 ---
 
@@ -618,6 +713,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-04-28 | 2.8 | Phase 10 ganhou 3 frentes novas (10.6, 10.7, 10.8) a partir de bugs reportados pelo stakeholder: contador "próximo culto" hardcoded ignorando `cms_eventos`, botão "Assistir" sem URL configurável, marquee mostrando horários passados + ícone Sparkles ✨ que parece IA. Cada item tem causa raiz + fix proposto + tasks. |
 | 2026-04-26 | 2.7 | Phase 10 documentada (5 frentes: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover, HelpHints substituindo dev notes). HelpHint component criado, caixas "Como funciona" removidas, `CardsEditor` ganhou prop `help`. Restante a executar. |
 | 2026-04-25 | 2.6 | Phase 7 (SEO) entregue: metadata template no root + 12 layouts por rota com title/description/OG/Twitter/canonical específicos, /admin e /login com noindex, app/sitemap.ts dinâmico (11 URLs), app/robots.ts bloqueando admin/login, skip link no body, form labels do /contato linkados via htmlFor + autoComplete. Site está pronto pra Search Console. 69 testes mantidos. |
 | 2026-04-25 | 2.5 | Phase 9 (cobertura total do admin) entregue: migration 003 com `cms_historia`, `getChurchEffective()` mergeando KV em cima do JSON, `/historia /pastor /contribua /contato /footer` consumindo CMS, 3 abas novas no admin (Igreja, Pastor, História), container de valores sugeridos removido de /contribua. 10 testes novos. Total: 69 testes. |
