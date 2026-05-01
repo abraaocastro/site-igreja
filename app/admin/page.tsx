@@ -76,6 +76,7 @@ import {
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
 import { HelpHint } from '@/components/help-hint'
+import { CalendarPreview } from '@/components/admin/calendar-preview'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
@@ -839,45 +840,59 @@ function EventosEditor({
   onUpdate: (e: CmsEvento) => Promise<void>
   onDelete: (id: string) => Promise<void>
 }) {
+  const [filterDate, setFilterDate] = useState<string | null>(null)
+
+  // Quando há filtro de data, mostrar apenas eventos daquele dia
+  const filteredItems = filterDate
+    ? items.filter((e) => e.date === filterDate)
+    : items
+
   return (
-    <CardsEditor<CmsEvento>
-      items={items}
-      onCreate={onCreate}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      fields={[
-        { key: 'title', label: 'Título', type: 'text' },
-        { key: 'description', label: 'Descrição', type: 'textarea' },
-        { key: 'date', label: 'Data', type: 'date' },
-        { key: 'time', label: 'Horário', type: 'time' },
-        { key: 'location', label: 'Local', type: 'text' },
-        {
-          key: 'category',
-          label: 'Categoria',
-          type: 'select',
-          options: ['culto', 'estudo', 'batismo', 'encontro', 'escola', 'evento'],
-        },
-        { key: 'imageUrl', label: 'Imagem do evento', type: 'image', hint: IMAGE_HINTS.evento },
-      ]}
-      makeNew={() => ({
-        title: 'Novo evento',
-        description: '',
-        date: new Date().toISOString().slice(0, 10),
-        time: '19:00',
-        location: 'Templo Principal',
-        category: 'evento',
-        imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=600&q=80',
-      })}
-      title="Eventos e Marcações de Datas"
-      description="Controle o calendário interativo. As datas marcadas aqui aparecem no calendário público."
-      preview={(e) => ({
-        title: e.title,
-        subtitle: e.description,
-        date: e.date,
-        time: e.time,
-        imageUrl: e.imageUrl,
-      })}
-    />
+    <div className="space-y-4">
+      <CalendarPreview
+        events={items}
+        selectedDate={filterDate}
+        onSelectDate={setFilterDate}
+      />
+      <CardsEditor<CmsEvento>
+        items={filteredItems}
+        onCreate={onCreate}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+        fields={[
+          { key: 'title', label: 'Título', type: 'text' },
+          { key: 'description', label: 'Descrição', type: 'textarea' },
+          { key: 'date', label: 'Data', type: 'date' },
+          { key: 'time', label: 'Horário', type: 'time' },
+          { key: 'location', label: 'Local', type: 'text' },
+          {
+            key: 'category',
+            label: 'Categoria',
+            type: 'select',
+            options: ['culto', 'estudo', 'batismo', 'encontro', 'escola', 'evento'],
+          },
+          { key: 'imageUrl', label: 'Imagem do evento', type: 'image', hint: IMAGE_HINTS.evento },
+        ]}
+        makeNew={() => ({
+          title: 'Novo evento',
+          description: '',
+          date: filterDate || new Date().toISOString().slice(0, 10),
+          time: '19:00',
+          location: 'Templo Principal',
+          category: 'evento',
+          imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=600&q=80',
+        })}
+        title="Eventos e Marcações de Datas"
+        description="Controle o calendário interativo. As datas marcadas aqui aparecem no calendário público."
+        preview={(e) => ({
+          title: e.title,
+          subtitle: e.description,
+          date: e.date,
+          time: e.time,
+          imageUrl: e.imageUrl,
+        })}
+      />
+    </div>
   )
 }
 
