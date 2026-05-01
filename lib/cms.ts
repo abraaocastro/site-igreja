@@ -7,7 +7,7 @@
  * estática + a primeira renderização nunca quebram.
  *
  * Convenção:
- *   - DB usa snake_case (`image_url`, `leader_instagram`, `link_texto`)
+ *   - DB usa snake_case (`image_url`, `link_texto`)
  *   - App usa camelCase (`imageUrl`, `leaderInstagram`, `linkTexto`)
  *   - As funções `fromRow()` / `toRow()` traduzem nas bordas.
  *
@@ -45,13 +45,17 @@ export interface CmsBanner {
   sortOrder: number
 }
 
+export interface CmsMinisterioLeader {
+  name: string
+  instagram: string | null
+}
+
 export interface CmsMinisterio {
   id: string
   name: string
   description: string
   imageUrl: string
-  leader: string
-  leaderInstagram: string | null
+  leaders: CmsMinisterioLeader[]
   sortOrder: number
 }
 
@@ -139,8 +143,7 @@ interface MinisterioRow {
   name: string
   description: string
   image_url: string
-  leader: string
-  leader_instagram: string | null
+  leaders: Array<{ name: string; instagram: string | null }>
   sort_order: number
 }
 const ministerioFromRow = (r: MinisterioRow): CmsMinisterio => ({
@@ -148,16 +151,14 @@ const ministerioFromRow = (r: MinisterioRow): CmsMinisterio => ({
   name: r.name,
   description: r.description,
   imageUrl: r.image_url,
-  leader: r.leader,
-  leaderInstagram: r.leader_instagram,
+  leaders: Array.isArray(r.leaders) ? r.leaders : [],
   sortOrder: r.sort_order,
 })
 const ministerioToRow = (m: Partial<CmsMinisterio>): Partial<MinisterioRow> => ({
   ...(m.name !== undefined && { name: m.name }),
   ...(m.description !== undefined && { description: m.description }),
   ...(m.imageUrl !== undefined && { image_url: m.imageUrl }),
-  ...(m.leader !== undefined && { leader: m.leader }),
-  ...(m.leaderInstagram !== undefined && { leader_instagram: m.leaderInstagram }),
+  ...(m.leaders !== undefined && { leaders: m.leaders }),
   ...(m.sortOrder !== undefined && { sort_order: m.sortOrder }),
 })
 
@@ -274,8 +275,7 @@ const DEFAULT_MINISTERIOS: CmsMinisterio[] = defaultMinisterios.map((m, i) => ({
   name: m.name,
   description: m.description,
   imageUrl: m.imageUrl,
-  leader: m.leader,
-  leaderInstagram: m.leaderInstagram,
+  leaders: [{ name: m.leader, instagram: m.leaderInstagram || null }],
   sortOrder: i,
 }))
 
@@ -345,7 +345,7 @@ export async function getMinisterios(): Promise<CmsMinisterio[]> {
   return safeRead(async (sb) => {
     const { data, error } = await sb
       .from('cms_ministerios')
-      .select('id,name,description,image_url,leader,leader_instagram,sort_order')
+      .select('id,name,description,image_url,leaders,sort_order')
       .order('sort_order', { ascending: true })
     if (error || !data || data.length === 0) return DEFAULT_MINISTERIOS
     return data.map(ministerioFromRow)
@@ -618,7 +618,7 @@ export async function upsertMinisterio(m: CmsMinisterio): Promise<CmsMinisterio>
     const { data, error } = await sb
       .from('cms_ministerios')
       .insert(payload)
-      .select('id,name,description,image_url,leader,leader_instagram,sort_order')
+      .select('id,name,description,image_url,leaders,sort_order')
       .single()
     if (error) throw error
     return ministerioFromRow(data as MinisterioRow)
@@ -627,7 +627,7 @@ export async function upsertMinisterio(m: CmsMinisterio): Promise<CmsMinisterio>
       .from('cms_ministerios')
       .update(payload)
       .eq('id', m.id)
-      .select('id,name,description,image_url,leader,leader_instagram,sort_order')
+      .select('id,name,description,image_url,leaders,sort_order')
       .single()
     if (error) throw error
     return ministerioFromRow(data as MinisterioRow)
@@ -639,7 +639,7 @@ export async function createMinisterio(m: Omit<CmsMinisterio, 'id'>): Promise<Cm
   const { data, error } = await sb
     .from('cms_ministerios')
     .insert(ministerioToRow(m))
-    .select('id,name,description,image_url,leader,leader_instagram,sort_order')
+    .select('id,name,description,image_url,leaders,sort_order')
     .single()
   if (error) throw error
   return ministerioFromRow(data as MinisterioRow)

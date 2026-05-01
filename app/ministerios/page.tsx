@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Search, Users, UserCheck, ArrowRight, Heart, Music, Baby, Globe, BookOpen, HandHeart, Instagram } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
 import { getMinisterios, type CmsMinisterio } from '@/lib/cms'
+import { LeadersDisplay } from '@/components/leaders-popover'
 
 type MinisterioLike = CmsMinisterio
 
@@ -94,26 +95,7 @@ export default function MinisteriosPage() {
                   <div className="p-5">
                     <p className="text-sm text-muted-foreground leading-relaxed">{m.description}</p>
                     <div className="mt-4 pt-4 border-t border-border flex items-center justify-between gap-2">
-                      <div className="flex flex-col gap-1 min-w-0">
-                        <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
-                          <UserCheck className="h-3.5 w-3.5 text-primary" />
-                          Líder: <strong className="truncate">{m.leader}</strong>
-                        </span>
-                        {m.leaderInstagram && (
-                          <a
-                            href={m.leaderInstagram}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition w-fit"
-                            aria-label={`Instagram de ${m.leader}`}
-                          >
-                            <Instagram className="h-3 w-3" />
-                            <span className="truncate">
-                              {'@' + m.leaderInstagram.replace(/\/$/, '').split('/').pop()}
-                            </span>
-                          </a>
-                        )}
-                      </div>
+                      <LeadersDisplay leaders={m.leaders} />
                       <Link
                         href="/contato"
                         className="shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-accent-foreground hover:bg-accent px-2.5 py-1 rounded-full transition"

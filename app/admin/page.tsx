@@ -599,6 +599,7 @@ function CardsEditor<T extends { id: string }>({
   description,
   preview,
   help,
+  renderExtra,
 }: {
   items: T[]
   onCreate: (v: Omit<T, 'id'>) => Promise<void>
@@ -611,6 +612,8 @@ function CardsEditor<T extends { id: string }>({
   preview: (item: T) => { title: string; subtitle?: string; date?: string; time?: string; imageUrl?: string | null }
   /** Conteúdo opcional pro popover de ajuda (?) ao lado do título. */
   help?: { label: string; body: React.ReactNode }
+  /** Renderiza campos extras no form de edição (ex: lista de líderes). */
+  renderExtra?: (item: T, onChange: (updated: T) => void) => React.ReactNode
 }) {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState<T | null>(null)
@@ -707,6 +710,7 @@ function CardsEditor<T extends { id: string }>({
                       }
                     />
                   ))}
+                  {renderExtra && draft && renderExtra(draft, (updated) => setDraft(updated))}
                   <div className="flex justify-end gap-2 pt-2 border-t border-border">
                     <button
                       onClick={cancelEdit}
@@ -845,15 +849,12 @@ function MinisteriosEditor({
       onDelete={onDelete}
       fields={[
         { key: 'name', label: 'Nome', type: 'text' },
-        { key: 'leader', label: 'Líder', type: 'text' },
-        { key: 'leaderInstagram', label: 'Instagram do líder (URL)', type: 'text' },
         { key: 'description', label: 'Descrição', type: 'textarea' },
         { key: 'imageUrl', label: 'Imagem do ministério', type: 'image', hint: IMAGE_HINTS.ministerio },
       ]}
       makeNew={() => ({
         name: 'Novo ministério',
-        leader: '',
-        leaderInstagram: null,
+        leaders: [{ name: '', instagram: null }],
         description: '',
         imageUrl: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&q=80',
         sortOrder: items.length,
@@ -861,7 +862,72 @@ function MinisteriosEditor({
       title="Ministérios"
       description="Atualize imagens, líderes e descrições dos cards de ministérios."
       preview={(m) => ({ title: m.name, subtitle: m.description, imageUrl: m.imageUrl })}
+      renderExtra={(item, onChange) => (
+        <LeadersField
+          leaders={item.leaders ?? []}
+          onChange={(leaders) => onChange({ ...item, leaders })}
+        />
+      )}
     />
+  )
+}
+
+/** Campo de líderes dinâmico: lista com +/× por linha */
+function LeadersField({
+  leaders,
+  onChange,
+}: {
+  leaders: Array<{ name: string; instagram: string | null }>
+  onChange: (leaders: Array<{ name: string; instagram: string | null }>) => void
+}) {
+  const update = (index: number, field: 'name' | 'instagram', value: string) => {
+    const next = [...leaders]
+    next[index] = { ...next[index], [field]: value || (field === 'instagram' ? null : '') }
+    onChange(next)
+  }
+  const add = () => onChange([...leaders, { name: '', instagram: null }])
+  const remove = (index: number) => onChange(leaders.filter((_, i) => i !== index))
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-xs font-medium text-foreground">Líderes</label>
+      {leaders.map((l, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={l.name}
+            onChange={(e) => update(i, 'name', e.target.value)}
+            placeholder="Nome do líder"
+            className="flex-1 px-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <input
+            type="text"
+            value={l.instagram ?? ''}
+            onChange={(e) => update(i, 'instagram', e.target.value)}
+            placeholder="Instagram (URL, opcional)"
+            className="flex-1 px-3 py-1.5 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          {leaders.length > 1 && (
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              className="p-1 text-destructive hover:bg-destructive/10 rounded transition"
+              aria-label="Remover líder"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Adicionar líder
+      </button>
+    </div>
   )
 }
 
