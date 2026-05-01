@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 2.9 (2026-04-28)
-**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — escopo agora com **9 frentes**: 5 originais (convite users, calendar preview, plano leitura, multi-líderes, HelpHints) + 4 bugs reportados pelo stakeholder (10.6 contador inteligente, 10.7 botão Assistir configurável, 10.8 marquee de eventos da semana, 10.9 UUID de banner aparecendo no eyebrow). HelpHint pronto, dev notes removidos.
+**Versão:** 3.0 (2026-05-01)
+**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — frentes 10.1–10.4 entregues (convite users, calendar preview, plano leitura editável, multi-líderes). Faltam: 10.5 (HelpHints restantes) + 10.6–10.9 (bugs reportados).
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -522,21 +522,21 @@ do dev pra nada do dia-a-dia. Cinco frentes independentes:
 - [x] 10.5.c — `CardsEditor` ganhou prop `help` opcional (renderiza `<HelpHint>` ao lado do título)
 - [ ] 10.5.d — Passar `help` em cada uso de `CardsEditor` (Banners, Ministérios, Eventos, História)
 - [ ] 10.5.e — Adicionar `<HelpHint>` em IgrejaEditor, PastorEditor, AvisosEditor, TextosEditor
-- [ ] 10.4.a — Migration 004: `leaders jsonb` em `cms_ministerios` + backfill + drop antigas
-- [ ] 10.4.b — `lib/cms` types + readers + writers atualizados
-- [ ] 10.4.c — `MinisteriosEditor`: lista dinâmica de líderes com `+`/`×`
-- [ ] 10.4.d — `components/leaders-popover.tsx` + uso em `/ministerios` e card da home
-- [ ] 10.3.a — Migration 004 (mesmo arquivo): `cms_plano_leitura` + RLS + seeds
-- [ ] 10.3.b — `lib/cms` adiciona getters/setters do plano de leitura
-- [ ] 10.3.c — Aba `Plano de Leitura` no admin via `CardsEditor`
-- [ ] 10.3.d — Refactor `app/plano-leitura/page.tsx` pra ler do DB
-- [ ] 10.2.a — Extrair `parseLocalDate` etc. pra `lib/calendar-utils.ts`
-- [ ] 10.2.b — `components/admin/calendar-preview.tsx`
-- [ ] 10.2.c — Inserir no topo do `EventosEditor` com filtro por dia
-- [ ] 10.1.a — `app/api/admin/users/route.ts` (POST cria, GET lista, DELETE revoga) usando `createAdminClient`
-- [ ] 10.1.b — Nova aba `Usuários` no admin, gated por `profile.role === 'admin'`
-- [ ] 10.1.c — Form de convite + lista de usuários + botão revogar
-- [ ] 10.1.d — Tela de sucesso mostra senha gerada uma única vez
+- [x] 10.4.a — Migration 004: `leaders jsonb` em `cms_ministerios` + backfill + drop antigas
+- [x] 10.4.b — `lib/cms` types + readers + writers atualizados
+- [x] 10.4.c — `MinisteriosEditor`: lista dinâmica de líderes com `+`/`×`
+- [x] 10.4.d — `components/leaders-popover.tsx` + uso em `/ministerios` e card da home
+- [x] 10.3.a — Migration 004 (mesmo arquivo): `cms_plano_leitura` + RLS + seeds
+- [x] 10.3.b — `lib/cms` adiciona getters/setters do plano de leitura
+- [x] 10.3.c — Aba `Plano de Leitura` no admin via `CardsEditor`
+- [x] 10.3.d — Refactor `app/plano-leitura/page.tsx` pra ler do DB
+- [x] 10.2.a — Extrair `parseLocalDate` etc. pra `lib/calendar-utils.ts`
+- [x] 10.2.b — `components/admin/calendar-preview.tsx`
+- [x] 10.2.c — Inserir no topo do `EventosEditor` com filtro por dia
+- [x] 10.1.a — `app/api/admin/users/route.ts` (POST cria, GET lista, DELETE revoga) usando `createAdminClient`
+- [x] 10.1.b — Nova aba `Usuários` no admin, gated por `profile.role === 'admin'`
+- [x] 10.1.c — Form de convite + lista de usuários + botão revogar
+- [x] 10.1.d — Tela de sucesso mostra senha gerada uma única vez
 - [ ] Tests: cobertura mínima dos novos readers/writers + role gating
 - [ ] Verificação: typecheck + tests + build
 - [ ] Atualizar SPEC.md/PROGRESS.md/SPECDESIGN.md
@@ -759,6 +759,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-05-01 | 3.0 | Frentes 10.1–10.4 entregues: convite de conteudistas (API route + aba admin + senha gerada), calendar preview no EventosEditor (lib/calendar-utils + filtro por dia), plano de leitura editável (migration 004 + CRUD + aba admin + página pública lê do DB), múltiplos líderes por ministério (migration 005 leaders jsonb + backfill + LeadersDisplay popover + CardsEditor.renderExtra). Fix RLS recursão em profiles_admin_read_all. |
 | 2026-04-28 | 2.9 | Phase 10 ganhou +1 frente (10.9): pré-headline editável em `cms_banners`. UUID estava vazando pro design via `banner.id.toUpperCase()` no eyebrow. Fix: nova coluna `pre_headline text` nullable + campo no admin + render condicional. |
 | 2026-04-28 | 2.8 | Phase 10 ganhou 3 frentes novas (10.6, 10.7, 10.8) a partir de bugs reportados pelo stakeholder: contador "próximo culto" hardcoded ignorando `cms_eventos`, botão "Assistir" sem URL configurável, marquee mostrando horários passados + ícone Sparkles ✨ que parece IA. Cada item tem causa raiz + fix proposto + tasks. |
 | 2026-04-26 | 2.7 | Phase 10 documentada (5 frentes: convite de usuários, calendar preview, plano de leitura editável, multi-líderes com popover, HelpHints substituindo dev notes). HelpHint component criado, caixas "Como funciona" removidas, `CardsEditor` ganhou prop `help`. Restante a executar. |

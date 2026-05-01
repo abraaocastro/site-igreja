@@ -1,13 +1,15 @@
 # Site PIBAC — Primeira Igreja Batista de Capim Grosso
 
-Site institucional da PIBAC em **Next.js 16 + Tailwind v4**, com calendário interativo, plano de leitura, área de contribuições, e um painel `/admin` (demo, client-side) para gerenciar imagens e textos.
+Site institucional da PIBAC em **Next.js 16 + Tailwind v4 + Supabase**, com calendário interativo, plano de leitura bíblica editável, área de contribuições, e um painel `/admin` com CMS completo persistido no banco.
 
 ## Stack
 
 - **Next.js 16** (App Router, React 19, Turbopack)
 - **Tailwind CSS v4** + shadcn/ui
+- **Supabase** (Auth + Postgres + Storage)
 - **lucide-react** (ícones)
-- **embla-carousel**, **react-day-picker**, **sonner**
+- **embla-carousel**, **react-day-picker**, **sonner**, **zxcvbn-ts**
+- **Vitest + React Testing Library** (testes)
 
 ## Identidade visual
 
@@ -19,21 +21,35 @@ Site institucional da PIBAC em **Next.js 16 + Tailwind v4**, com calendário int
 | Branco | `#FFFFFF` | Fundo |
 | Vermelho | `#FF2A2A` | Apenas detalhes |
 
+Fontes: **Inter** (sans), **Fraunces** (serif editorial), **JetBrains Mono** (números/eyebrow).
+
 ## Rodando localmente
 
 ```bash
 npm install
-cp .env.example .env.local   # ajuste as credenciais do admin
+cp .env.example .env.local   # preencha com credenciais do Supabase
+npm run bootstrap:admin       # cria o admin padrão
 npm run dev
 ```
 
 Abra http://localhost:3000.
 
+### Variáveis de ambiente necessárias
+
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+```
+
 ### Scripts
 
 - `npm run dev` — servidor de dev
 - `npm run build` — build de produção
-- `npm start` — servir o build
+- `npm test` — roda testes (Vitest)
+- `npm run typecheck` — verificação de tipos
+- `npm run bootstrap:admin` — cria/reseta o admin padrão
 
 ## Estrutura
 
@@ -41,57 +57,69 @@ Abra http://localhost:3000.
 app/
   page.tsx              # Home
   quem-somos/           # Sobre a igreja
-  historia/             # Linha do tempo
+  historia/             # Linha do tempo (editável via admin)
   visao/                # Missão, visão, propósito
-  pastor/               # Pastor Presidente
-  ministerios/          # Cards de ministérios com busca
+  pastor/               # Pastor Presidente (editável via admin)
+  ministerios/          # Cards com múltiplos líderes + popover
   eventos/              # Lista de eventos com filtros
   calendario/           # Calendário interativo + export .ics
-  plano-leitura/        # 30 dias com progresso salvo
-  contribua/            # PIX, transferência e presencial
+  plano-leitura/        # 30 dias com progresso salvo (editável via admin)
+  contribua/            # PIX e informações de contribuição
   contato/              # Formulário + mapa
-  login/                # Login demo
-  admin/                # Painel de conteúdo (CMS client-side)
+  login/                # Login com Supabase Auth
+  admin/                # Painel de conteúdo (CMS no Supabase)
+  api/admin/users/      # API route para gerenciar conteudistas
 components/
   layout/{header,footer}.tsx
   banner-carousel.tsx
   section-title.tsx
-  ui/*                  # shadcn/ui
+  aviso-banner.tsx        # Banner de avisos com severidade
+  help-hint.tsx           # Popover de ajuda (?) no admin
+  leaders-popover.tsx     # Exibe 1 líder inline ou N líderes em popover
+  password-strength.tsx   # Medidor de força de senha (zxcvbn)
+  admin/calendar-preview.tsx  # Mini-calendário no EventosEditor
+  ui/*                    # shadcn/ui
 lib/
-  auth.tsx              # Auth client-side (DEMO)
-  data.ts               # Dados iniciais (ministérios, eventos, plano)
+  auth.tsx              # AuthProvider + useAuth (Supabase Auth)
+  cms.ts                # Readers/writers do CMS (Supabase)
+  calendar-utils.ts     # Funções compartilhadas do calendário
+  data.ts               # Dados defaults (fallback se DB offline)
+  password-strength.ts  # evaluatePassword + generatePassphrase
+  site-data.ts          # Reader tipado de data/church.json
+  supabase/             # Clientes Supabase (browser, server, admin)
+supabase/migrations/    # Migrations SQL (rodar no SQL Editor)
+scripts/
+  bootstrap-admin.ts    # Cria/reseta o admin padrão
 ```
+
+## Painel de conteúdo (/admin)
+
+O painel permite editar banners, ministérios (com múltiplos líderes), eventos/datas, plano de leitura, textos da home, dados da igreja, pastor, história e avisos globais. Tudo é persistido no Supabase e visível para todos os visitantes.
+
+**Roles:**
+- **Admin** — acesso total, incluindo convidar/revogar conteudistas
+- **Conteudista** — acesso a tudo exceto gerenciamento de usuários
 
 ## Deploy na Vercel
 
 1. Acesse [vercel.com/new](https://vercel.com/new) e importe este repositório.
-2. Em **Environment Variables**, defina (pelo menos):
-   - `NEXT_PUBLIC_ADMIN_EMAIL`
-   - `NEXT_PUBLIC_ADMIN_PASSWORD`
-3. Clique em **Deploy**. A Vercel detecta Next.js automaticamente.
+2. Em **Environment Variables**, defina:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `NEXT_PUBLIC_SITE_URL`
+3. Clique em **Deploy**.
+4. Rode as migrations (`supabase/migrations/*.sql`) no SQL Editor do Supabase.
+5. Rode `npm run bootstrap:admin` localmente para criar o admin.
 
-## Painel de conteúdo (/admin)
+## Migrations pendentes
 
-O painel permite editar banners, ministérios, eventos/datas do calendário e textos da home. As alterações ficam no `localStorage` do navegador do conteudísta — são **pessoais e temporárias**, servem como preview.
-
-Para persistência real e acesso da equipe inteira, é preciso conectar a um backend (Supabase, Firebase, ou uma API própria) — ver seção "Próximos passos" abaixo.
-
-## ⚠️ Segurança — limitações atuais
-
-Este repositório é um **site estático com CMS de demonstração**. Antes de usar em produção:
-
-- **Auth é client-side**. As credenciais viajam no bundle JS e podem ser lidas via DevTools. Substitua por NextAuth/Clerk/Supabase/Firebase Auth antes de disponibilizar o admin para terceiros.
-- **CMS é localStorage**. Trocar de dispositivo ou limpar o cache apaga as edições. Plugue em um backend real (Supabase, Firebase Firestore, Sanity, etc.).
-- **Formulários não enviam para servidor**. `/contato` e `/login` processam só no cliente — para receber e-mails, integre Formspree/Brevo/Resend ou um endpoint próprio.
-- **Troque a senha padrão** (`.env.local`) antes de compartilhar o deploy.
-
-## Próximos passos sugeridos
-
-- [ ] Migrar auth para NextAuth ou Clerk
-- [ ] Substituir `localStorage` por Supabase/Firebase
-- [ ] Integrar formulário de contato com Resend/Formspree
-- [ ] Adicionar upload de imagens para um storage (Uploadthing, Cloudinary)
-- [ ] Política de privacidade e consentimento de cookies
+Rodar no Supabase SQL Editor na ordem:
+1. `001_profiles_and_roles.sql`
+2. `002_cms_content.sql`
+3. `003_cms_full.sql`
+4. `004_plano_leitura.sql`
+5. `005_multi_leaders.sql`
 
 ## Licença
 

@@ -8,8 +8,8 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-04-25 (Phase 9 fechada — admin com cobertura total)
-**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.5
+**Última atualização:** 2026-05-01 (Phase 10 frentes 10.1–10.4 entregues)
+**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.0
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
 
 > **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
@@ -132,6 +132,10 @@ import {
   getChurchEffective,
   CHURCH_TEXTOS_KEYS,
   type CmsHistoriaEntry,
+  // Phase 10
+  getPlanoLeitura, createPlanoLeitura, upsertPlanoLeitura, deletePlanoLeitura,
+  type CmsPlanoLeituraDay,
+  type CmsMinisterioLeader,  // leaders agora é Array<{name, instagram}>
 } from '@/lib/cms'
 
 // Reader pattern (page.tsx — client component):

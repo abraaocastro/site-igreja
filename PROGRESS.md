@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-04-28 (Phase 10 ganhou +1 frente: pre-headline editável)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v2.9
+> **Última atualização:** 2026-05-01 (Phase 10 frentes 10.1–10.4 entregues)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.0
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, **9 frentes**). HelpHint pronto + dev notes removidos. Próximos: ver checklist em SPEC §Phase 10.
+> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, **9 frentes**). Frentes 10.1–10.4 entregues. Próximos: 10.5 (HelpHints restantes), 10.6–10.9 (bugs reportados).
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -17,17 +17,17 @@
 
 ---
 
-## 🎯 Próximos passos (atualizado 2026-04-26)
+## 🎯 Próximos passos (atualizado 2026-05-01)
 
 ### 🟡 Phase 10 — Refinos do admin (em execução)
 
 5 frentes independentes (detalhes em SPEC.md §Phase 10):
 
-#### 10.1. Convite de novos usuários (admin → conteudista)
-- Aba `Usuários` em `/admin`, **só pra `role='admin'`**
-- API route `app/api/admin/users/route.ts` (POST/GET/DELETE) usando service-role
-- Conteudista vê todas as abas EXCETO `Usuários`
-- Senha gerada exibida 1× no console + tela; convidado é forçado a trocar via `/admin/primeiro-acesso`
+#### 10.1. Convite de novos usuários (admin → conteudista) ✅
+- ✅ Aba `Usuários` em `/admin`, **só pra `role='admin'`**
+- ✅ API route `app/api/admin/users/route.ts` (POST/GET/DELETE) usando service-role
+- ✅ Conteudista vê todas as abas EXCETO `Usuários`
+- ✅ Senha gerada exibida 1× na tela; convidado é forçado a trocar via `/admin/primeiro-acesso`
 
 #### 10.2. Calendar preview no EventosEditor
 - Mini-calendário com dots por categoria, clique filtra eventos do dia
@@ -137,6 +137,10 @@ o agente deve:
 | `9a74ef5` | chore(next16): renomeia middleware.ts → proxy.ts | Convenção nova do Next 16 (mesmo runtime, só nome novo do arquivo + da função exportada) |
 | `f289bd7` | feat(phase-4+8): avisos globais + CMS no Supabase | **Phase 4** — `<AvisoBanner>` (3 severidades, dispense via sessionStorage com chave por hash da mensagem, prop `forceOpen` pra preview), injetado em `app/layout.tsx` acima do `<Header>`, 12 testes RTL. **Phase 8** — migration 002 com 5 tabelas (`cms_banners`, `cms_ministerios`, `cms_eventos`, `cms_textos`, `cms_avisos`) + helper `is_cms_writer()` + RLS (público lê, writer escreve) + bucket `public-images` + seeds idempotentes. `lib/cms.ts` com readers/writers + `uploadImage`. Admin reescrito pra usar banco. Páginas públicas e AvisoBanner refatorados pra ler do banco com fallback nos defaults. **15 testes novos (59 totais).** Migration rodada manualmente no Supabase em 2026-04-25. |
 | _pending_ | feat(phase-9): cobertura total do admin | Migration 003 com tabela `cms_historia` (timeline) + RLS + seeds. `lib/cms.ts` ganha CRUD de historia + `getChurchEffective()` que merge `cms_textos` KV em cima de `data/church.json` (campos: igreja/endereço/contato/social/pastor/pix/historia). 3 abas novas no /admin: **Igreja** (5 grupos: identidade/endereço/contato/social/pix), **Pastor** (foto + bio + identificação), **História** (textos + CRUD timeline). Páginas `/historia`, `/pastor`, `/contribua`, `/contato` e `<Footer>` refatorados pra usar o merger. Container "valor sugerido" removido de /contribua. **10 testes novos (69 totais).** |
+| `fd2c9ee` | feat(phase-10.1): convite de conteudistas via admin | **Phase 10.1** — API route `app/api/admin/users/route.ts` (POST/GET/DELETE com service-role). Aba `Usuários` no admin gated por `profile.role === 'admin'`. Form de convite (nome+email), senha gerada via `generatePassphrase()` exibida 1×, lista de equipe com último login, botão revogar com confirm. Fix RLS recursão em profiles. |
+| _amend_ | feat(phase-10.2): calendar preview no EventosEditor | **Phase 10.2** — `lib/calendar-utils.ts` extraído do calendário público. `components/admin/calendar-preview.tsx` com navegação de mês, dots coloridos por categoria, clique filtra eventos. `EventosEditor` integrado com filtro por dia + data pré-preenchida ao criar evento. |
+| _amend_ | feat(phase-10.3): plano de leitura editável via admin | **Phase 10.3** — Migration `004_plano_leitura.sql` (`cms_plano_leitura` + RLS + seeds 30 dias). `lib/cms.ts` ganha tipo `CmsPlanoLeituraDay` + CRUD. Nova aba `Plano de Leitura` no admin. `app/plano-leitura/page.tsx` refatorada pra ler do DB com fallback. |
+| _amend_ | feat(phase-10.4): múltiplos líderes por ministério | **Phase 10.4** — Migration `005_multi_leaders.sql` (coluna `leaders jsonb` + backfill + drop antigas). `CmsMinisterio.leaders: Array<{name, instagram}>`. `MinisteriosEditor` com lista dinâmica de líderes (+/×). `components/leaders-popover.tsx` (1 líder=inline, 2+=popover). `CardsEditor` ganhou prop `renderExtra`. |
 
 ---
 
@@ -346,7 +350,7 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
 | 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | `39c5483` |
 | 7 | SEO local (metadata + sitemap + robots + a11y) | ✅ Completa | `a2c9a79` |
-| **10** | **Refinos do admin (convite users + calendar preview + plano leitura + multi-líderes + HelpHints)** | 🔄 **Em execução** — HelpHint + dev notes removidos prontos | parcial pending commit |
+| **10** | **Refinos do admin (convite users + calendar preview + plano leitura + multi-líderes + HelpHints)** | 🔄 **Em execução** — 10.1–10.4 entregues. Faltam: 10.5 (HelpHints), 10.6–10.9 (bugs) | `fd2c9ee` + amends |
 
 ---
 
