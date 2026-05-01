@@ -42,6 +42,7 @@ import {
   UserCircle2,
   History,
   Shield,
+  BookOpen,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { type ChurchAviso, type AvisoSeveridade } from '@/lib/site-data'
@@ -52,6 +53,7 @@ import {
   getTextos,
   getAviso,
   getHistoria,
+  getPlanoLeitura,
   upsertBanner,
   createBanner,
   deleteBanner,
@@ -64,6 +66,9 @@ import {
   upsertHistoria,
   createHistoria,
   deleteHistoria,
+  createPlanoLeitura,
+  upsertPlanoLeitura,
+  deletePlanoLeitura,
   saveTextos,
   saveAviso,
   uploadImage,
@@ -73,6 +78,7 @@ import {
   type CmsEvento,
   type CmsTextos,
   type CmsHistoriaEntry,
+  type CmsPlanoLeituraDay,
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
 import { HelpHint } from '@/components/help-hint'
@@ -90,6 +96,7 @@ type Tab =
   | 'ministerios'
   | 'eventos'
   | 'textos'
+  | 'plano'
   | 'usuarios'
 
 export default function AdminPage() {
@@ -102,6 +109,7 @@ export default function AdminPage() {
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [historia, setHistoria] = useState<CmsHistoriaEntry[]>([])
+  const [plano, setPlano] = useState<CmsPlanoLeituraDay[]>([])
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
   const [aviso, setAviso] = useState<ChurchAviso>({
     ativo: false,
@@ -113,13 +121,14 @@ export default function AdminPage() {
   const [hydrated, setHydrated] = useState(false)
 
   const reloadAll = useCallback(async () => {
-    const [b, m, e, t, a, h] = await Promise.all([
+    const [b, m, e, t, a, h, pl] = await Promise.all([
       getBanners(),
       getMinisterios(),
       getEventos(),
       getTextos(),
       getAviso(),
       getHistoria(),
+      getPlanoLeitura(),
     ])
     setBanners(b)
     setMinisterios(m)
@@ -127,6 +136,7 @@ export default function AdminPage() {
     setTextos(t)
     setAviso(a)
     setHistoria(h)
+    setPlano(pl)
     setHydrated(true)
   }, [])
 
@@ -161,6 +171,7 @@ export default function AdminPage() {
     { id: 'ministerios', label: 'Ministérios', icon: Users },
     { id: 'eventos', label: 'Eventos e Datas', icon: Calendar },
     { id: 'textos', label: 'Textos do Site', icon: FileText },
+    { id: 'plano', label: 'Plano de Leitura', icon: BookOpen },
     // Aba exclusiva do admin — conteudista não vê
     ...(profile?.role === 'admin'
       ? [{ id: 'usuarios' as Tab, label: 'Usuários', icon: Shield }]
@@ -397,6 +408,31 @@ export default function AdminPage() {
               await saveTextos(next)
               setTextos(next)
               toast.success('Textos atualizados.')
+            }}
+          />
+        )}
+
+        {tab === 'plano' && (
+          <PlanoLeituraEditor
+            items={plano}
+            onCreate={async (p) => {
+              const created = await createPlanoLeitura(p)
+              setPlano((prev) => [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder))
+              toast.success('Dia adicionado ao plano.')
+            }}
+            onUpdate={async (p) => {
+              const saved = await upsertPlanoLeitura(p)
+              setPlano((prev) =>
+                prev.some((x) => x.id === p.id)
+                  ? prev.map((x) => (x.id === p.id ? saved : x))
+                  : [...prev.filter((x) => x.id !== p.id), saved]
+              )
+              toast.success('Dia salvo.')
+            }}
+            onDelete={async (id) => {
+              await deletePlanoLeitura(id)
+              setPlano((prev) => prev.filter((x) => x.id !== id))
+              toast.success('Dia removido.')
             }}
           />
         )}
@@ -1672,10 +1708,59 @@ function HistoriaEditor({
   )
 }
 
+// ======================== PlanoLeituraEditor ========================
+
+function PlanoLeituraEditor({
+  items,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: {
+  items: CmsPlanoLeituraDay[]
+  onCreate: (p: Omit<CmsPlanoLeituraDay, 'id'>) => Promise<void>
+  onUpdate: (p: CmsPlanoLeituraDay) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+}) {
+  // Coerce sortOrder e dia pra int (CardsEditor retorna strings de inputs)
+  const coerce = <T extends { sortOrder: number | string; dia: number | string }>(p: T): T => ({
+    ...p,
+    sortOrder: typeof p.sortOrder === 'number' ? p.sortOrder : parseInt(String(p.sortOrder || '0'), 10) || 0,
+    dia: typeof p.dia === 'number' ? p.dia : parseInt(String(p.dia || '0'), 10) || 0,
+  })
+  const wrappedCreate = (p: Omit<CmsPlanoLeituraDay, 'id'>) => onCreate(coerce(p))
+  const wrappedUpdate = (p: CmsPlanoLeituraDay) => onUpdate(coerce(p))
+
+  return (
+    <CardsEditor<CmsPlanoLeituraDay>
+      items={items}
+      onCreate={wrappedCreate}
+      onUpdate={wrappedUpdate}
+      onDelete={onDelete}
+      fields={[
+        { key: 'dia', label: 'Dia (número)', type: 'text' },
+        { key: 'livro', label: 'Livro', type: 'text' },
+        { key: 'capitulos', label: 'Capítulos', type: 'text' },
+        { key: 'tema', label: 'Tema', type: 'text' },
+        { key: 'sortOrder', label: 'Ordem (número, menor primeiro)', type: 'text' },
+      ]}
+      makeNew={() => ({
+        dia: items.length + 1,
+        livro: 'Livro',
+        capitulos: '1-3',
+        tema: 'Novo tema',
+        sortOrder: items.length + 1,
+      })}
+      title="Plano de Leitura Bíblica"
+      description="Edite os dias do plano de leitura. Cada dia aparece como um card na página pública /plano-leitura."
+      preview={(p) => ({
+        title: `Dia ${p.dia} — ${p.tema}`,
+        subtitle: `${p.livro} ${p.capitulos}`,
+      })}
+    />
+  )
+}
+
 // ======================== UsuariosEditor ========================
-//
-// Phase 10.1 — Convite de novos conteudistas.
-// Só visível para role='admin'. Usa API route /api/admin/users.
 
 interface AdminUser {
   id: string

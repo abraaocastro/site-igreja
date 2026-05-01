@@ -3,16 +3,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BookOpen, Check, Trophy, RefreshCw, ChevronLeft, ChevronRight, Share2 } from 'lucide-react'
 import { SectionTitle } from '@/components/section-title'
-import { planoLeitura } from '@/lib/data'
+import { getPlanoLeitura, type CmsPlanoLeituraDay } from '@/lib/cms'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
 const STORAGE = 'pibac-plano-progress'
 
 export default function PlanoLeituraPage() {
+  const [plano, setPlano] = useState<CmsPlanoLeituraDay[]>([])
   const [done, setDone] = useState<Record<number, boolean>>({})
   const [ready, setReady] = useState(false)
   const [focusDia, setFocusDia] = useState<number>(1)
+
+  // Carregar plano do banco
+  useEffect(() => {
+    let cancelled = false
+    getPlanoLeitura().then((rows) => {
+      if (!cancelled) setPlano(rows)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     try {
@@ -29,9 +39,9 @@ export default function PlanoLeituraPage() {
     } catch {}
   }, [done, ready])
 
-  const total = planoLeitura.length
+  const total = plano.length
   const completed = Object.values(done).filter(Boolean).length
-  const progress = Math.round((completed / total) * 100)
+  const progress = total > 0 ? Math.round((completed / total) * 100) : 0
 
   const toggle = (dia: number) => {
     setDone((d) => ({ ...d, [dia]: !d[dia] }))
@@ -56,15 +66,15 @@ export default function PlanoLeituraPage() {
     }
   }
 
-  const focus = planoLeitura.find((p) => p.dia === focusDia)
+  const focus = plano.find((p) => p.dia === focusDia)
 
   const semanas = useMemo(() => {
-    const groups: typeof planoLeitura[] = []
-    for (let i = 0; i < planoLeitura.length; i += 7) {
-      groups.push(planoLeitura.slice(i, i + 7))
+    const groups: typeof plano[] = []
+    for (let i = 0; i < plano.length; i += 7) {
+      groups.push(plano.slice(i, i + 7))
     }
     return groups
-  }, [])
+  }, [plano])
 
   return (
     <div>

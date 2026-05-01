@@ -21,6 +21,7 @@ import {
   heroBanners as defaultBanners,
   ministerios as defaultMinisterios,
   eventos as defaultEventos,
+  planoLeitura as defaultPlanoLeitura,
 } from '@/lib/data'
 import {
   getChurch as getChurchStatic,
@@ -75,6 +76,15 @@ export interface CmsHistoriaEntry {
 }
 
 export type CmsTextos = Record<string, string>
+
+export interface CmsPlanoLeituraDay {
+  id: string
+  dia: number
+  livro: string
+  capitulos: string
+  tema: string
+  sortOrder: number
+}
 
 export const DEFAULT_TEXTOS: CmsTextos = {
   homeTitulo: 'Bem-vindo à Nossa Igreja',
@@ -205,6 +215,30 @@ const historiaToRow = (h: Partial<CmsHistoriaEntry>): Partial<HistoriaRow> => ({
   ...(h.sortOrder !== undefined && { sort_order: h.sortOrder }),
 })
 
+interface PlanoLeituraRow {
+  id: string
+  dia: number
+  livro: string
+  capitulos: string
+  tema: string
+  sort_order: number
+}
+const planoFromRow = (r: PlanoLeituraRow): CmsPlanoLeituraDay => ({
+  id: r.id,
+  dia: r.dia,
+  livro: r.livro,
+  capitulos: r.capitulos,
+  tema: r.tema,
+  sortOrder: r.sort_order,
+})
+const planoToRow = (p: Partial<CmsPlanoLeituraDay>): Partial<PlanoLeituraRow> => ({
+  ...(p.dia !== undefined && { dia: p.dia }),
+  ...(p.livro !== undefined && { livro: p.livro }),
+  ...(p.capitulos !== undefined && { capitulos: p.capitulos }),
+  ...(p.tema !== undefined && { tema: p.tema }),
+  ...(p.sortOrder !== undefined && { sort_order: p.sortOrder }),
+})
+
 interface AvisoRow {
   id: number
   ativo: boolean
@@ -266,6 +300,15 @@ const DEFAULT_EVENTOS: CmsEvento[] = defaultEventos.map((e) => ({
   location: e.location,
   category: e.category,
   imageUrl: e.imageUrl,
+}))
+
+const DEFAULT_PLANO_LEITURA: CmsPlanoLeituraDay[] = defaultPlanoLeitura.map((p, i) => ({
+  id: `default-${i}`,
+  dia: p.dia,
+  livro: p.livro,
+  capitulos: p.capitulos,
+  tema: p.tema,
+  sortOrder: p.dia,
 }))
 
 // ============================================================
@@ -355,6 +398,17 @@ export async function getHistoria(): Promise<CmsHistoriaEntry[]> {
     if (error || !data || data.length === 0) return DEFAULT_HISTORIA
     return data.map(historiaFromRow)
   }, DEFAULT_HISTORIA)
+}
+
+export async function getPlanoLeitura(): Promise<CmsPlanoLeituraDay[]> {
+  return safeRead(async (sb) => {
+    const { data, error } = await sb
+      .from('cms_plano_leitura')
+      .select('id,dia,livro,capitulos,tema,sort_order')
+      .order('sort_order', { ascending: true })
+    if (error || !data || data.length === 0) return DEFAULT_PLANO_LEITURA
+    return data.map(planoFromRow)
+  }, DEFAULT_PLANO_LEITURA)
 }
 
 // ============================================================
@@ -709,6 +763,51 @@ export async function upsertHistoria(h: CmsHistoriaEntry): Promise<CmsHistoriaEn
 export async function deleteHistoria(id: string): Promise<void> {
   const sb = writerClient()
   const { error } = await sb.from('cms_historia').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Plano de Leitura (Phase 10.3) ----------
+
+const PLANO_SELECT = 'id,dia,livro,capitulos,tema,sort_order' as const
+
+export async function createPlanoLeitura(p: Omit<CmsPlanoLeituraDay, 'id'>): Promise<CmsPlanoLeituraDay> {
+  const sb = writerClient()
+  const { data, error } = await sb
+    .from('cms_plano_leitura')
+    .insert(planoToRow(p))
+    .select(PLANO_SELECT)
+    .single()
+  if (error) throw error
+  return planoFromRow(data as PlanoLeituraRow)
+}
+
+export async function upsertPlanoLeitura(p: CmsPlanoLeituraDay): Promise<CmsPlanoLeituraDay> {
+  const sb = writerClient()
+  const isDefault = !/^[0-9a-f-]{36}$/i.test(p.id)
+  const payload = planoToRow(p)
+  if (isDefault) {
+    const { data, error } = await sb
+      .from('cms_plano_leitura')
+      .insert(payload)
+      .select(PLANO_SELECT)
+      .single()
+    if (error) throw error
+    return planoFromRow(data as PlanoLeituraRow)
+  } else {
+    const { data, error } = await sb
+      .from('cms_plano_leitura')
+      .update(payload)
+      .eq('id', p.id)
+      .select(PLANO_SELECT)
+      .single()
+    if (error) throw error
+    return planoFromRow(data as PlanoLeituraRow)
+  }
+}
+
+export async function deletePlanoLeitura(id: string): Promise<void> {
+  const sb = writerClient()
+  const { error } = await sb.from('cms_plano_leitura').delete().eq('id', id)
   if (error) throw error
 }
 
