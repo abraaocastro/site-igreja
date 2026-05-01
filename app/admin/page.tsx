@@ -41,6 +41,7 @@ import {
   Building2,
   UserCircle2,
   History,
+  Shield,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { type ChurchAviso, type AvisoSeveridade } from '@/lib/site-data'
@@ -88,6 +89,7 @@ type Tab =
   | 'ministerios'
   | 'eventos'
   | 'textos'
+  | 'usuarios'
 
 export default function AdminPage() {
   const { user, profile, logout, loading } = useAuth()
@@ -158,6 +160,10 @@ export default function AdminPage() {
     { id: 'ministerios', label: 'Ministérios', icon: Users },
     { id: 'eventos', label: 'Eventos e Datas', icon: Calendar },
     { id: 'textos', label: 'Textos do Site', icon: FileText },
+    // Aba exclusiva do admin — conteudista não vê
+    ...(profile?.role === 'admin'
+      ? [{ id: 'usuarios' as Tab, label: 'Usuários', icon: Shield }]
+      : []),
   ]
 
   const stats = [
@@ -392,6 +398,10 @@ export default function AdminPage() {
               toast.success('Textos atualizados.')
             }}
           />
+        )}
+
+        {tab === 'usuarios' && profile?.role === 'admin' && (
+          <UsuariosEditor currentUserId={user.id} />
         )}
       </div>
     </div>
@@ -1642,6 +1652,293 @@ function HistoriaEditor({
             imageUrl: h.imageUrl,
           })}
         />
+      </div>
+    </div>
+  )
+}
+
+// ======================== UsuariosEditor ========================
+//
+// Phase 10.1 — Convite de novos conteudistas.
+// Só visível para role='admin'. Usa API route /api/admin/users.
+
+interface AdminUser {
+  id: string
+  email: string
+  nome: string | null
+  role: string
+  createdAt: string
+  lastSignIn: string | null
+}
+
+function UsuariosEditor({ currentUserId }: { currentUserId: string }) {
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(true)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteNome, setInviteNome] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  // Resultado do convite — mostra senha gerada uma única vez
+  const [inviteResult, setInviteResult] = useState<{
+    email: string
+    nome: string
+    password: string
+  } | null>(null)
+
+  const loadUsers = useCallback(async () => {
+    setLoadingUsers(true)
+    try {
+      const res = await fetch('/api/admin/users')
+      if (!res.ok) throw new Error('Erro ao carregar usuários.')
+      const data = await res.json()
+      setUsers(data.users ?? [])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao carregar usuários.')
+    } finally {
+      setLoadingUsers(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim() || !inviteNome.trim()) {
+      toast.error('Preencha o e-mail e o nome.')
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail.trim(), nome: inviteNome.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erro ao convidar.')
+        return
+      }
+      setInviteResult({
+        email: inviteEmail.trim().toLowerCase(),
+        nome: inviteNome.trim(),
+        password: data.generatedPassword,
+      })
+      setInviteEmail('')
+      setInviteNome('')
+      loadUsers()
+      toast.success('Conteudista convidado com sucesso.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao convidar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleDelete = async (userId: string) => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/admin/users?id=${userId}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erro ao revogar acesso.')
+        return
+      }
+      setDeleteConfirm(null)
+      loadUsers()
+      toast.success('Acesso revogado.')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao revogar.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <Shield className="h-5 w-5 text-primary" />
+          Gerenciar Usuários
+          <HelpHint label="Sobre esta aba">
+            Convide pessoas da equipe para ajudar a atualizar o conteúdo do site. Conteudistas podem editar tudo exceto esta aba de usuários.
+          </HelpHint>
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Convide conteudistas e gerencie quem tem acesso ao painel.
+        </p>
+      </div>
+
+      {/* Formulário de convite */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-4">
+        <p className="font-medium text-foreground flex items-center gap-2">
+          <Plus className="h-4 w-4 text-primary" />
+          Convidar novo conteudista
+        </p>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">Nome</label>
+            <input
+              type="text"
+              value={inviteNome}
+              onChange={(e) => setInviteNome(e.target.value)}
+              placeholder="Nome completo"
+              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-foreground mb-1">E-mail</label>
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="email@exemplo.com"
+              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={handleInvite}
+            disabled={busy || !inviteEmail.trim() || !inviteNome.trim()}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Convidar
+          </button>
+        </div>
+      </div>
+
+      {/* Resultado do convite — senha gerada (exibida 1×) */}
+      {inviteResult && (
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-green-600" />
+            <p className="font-medium text-green-800 dark:text-green-200">Convite criado com sucesso!</p>
+          </div>
+          <div className="text-sm space-y-1 text-green-700 dark:text-green-300">
+            <p><strong>Nome:</strong> {inviteResult.nome}</p>
+            <p><strong>E-mail:</strong> {inviteResult.email}</p>
+            <p><strong>Senha temporária:</strong></p>
+            <div className="flex items-center gap-2 mt-1">
+              <code className="bg-green-100 dark:bg-green-900 px-3 py-1.5 rounded text-sm font-mono select-all">
+                {inviteResult.password}
+              </code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(inviteResult.password)
+                  toast.success('Senha copiada!')
+                }}
+                className="px-2 py-1.5 text-xs rounded bg-green-200 dark:bg-green-800 hover:bg-green-300 dark:hover:bg-green-700 transition"
+              >
+                Copiar
+              </button>
+            </div>
+          </div>
+          <div className="bg-green-100 dark:bg-green-900/50 rounded p-3 text-xs text-green-800 dark:text-green-300">
+            <p className="font-medium mb-1">⚠ Atenção:</p>
+            <p>Esta senha é exibida apenas uma vez. Copie e envie ao conteudista.</p>
+            <p>No primeiro login, ele será obrigado a escolher uma nova senha forte.</p>
+          </div>
+          <button
+            onClick={() => setInviteResult(null)}
+            className="text-xs text-green-600 dark:text-green-400 hover:underline"
+          >
+            Fechar aviso
+          </button>
+        </div>
+      )}
+
+      {/* Lista de usuários */}
+      <div className="bg-card rounded-lg border border-border p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="font-medium text-foreground flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" />
+            Equipe ({users.length})
+          </p>
+          <button
+            onClick={loadUsers}
+            disabled={loadingUsers}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', loadingUsers && 'animate-spin')} />
+            Atualizar
+          </button>
+        </div>
+
+        {loadingUsers ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        ) : users.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">Nenhum usuário encontrado.</p>
+        ) : (
+          <div className="divide-y divide-border">
+            {users.map((u) => (
+              <div key={u.id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {u.nome ?? u.email.split('@')[0]}
+                    </p>
+                    <span
+                      className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider',
+                        u.role === 'admin'
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-accent/10 text-accent-foreground'
+                      )}
+                    >
+                      {u.role}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {u.lastSignIn
+                      ? `Último login: ${new Date(u.lastSignIn).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+                      : 'Nunca logou'}
+                  </p>
+                </div>
+
+                {/* Ações — só mostra pra conteudistas (nunca pro próprio admin nem pra outros admins) */}
+                {u.role !== 'admin' && u.id !== currentUserId && (
+                  <div className="flex-shrink-0">
+                    {deleteConfirm === u.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-destructive">Confirmar?</span>
+                        <button
+                          onClick={() => handleDelete(u.id)}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                        >
+                          {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                          Sim
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-muted hover:bg-muted/80"
+                        >
+                          <X className="h-3 w-3" />
+                          Não
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirm(u.id)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium text-destructive hover:bg-destructive/10 transition"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Revogar acesso
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
