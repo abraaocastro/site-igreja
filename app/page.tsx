@@ -5,11 +5,10 @@ import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import {
   Calendar, Clock, MapPin, ArrowUpRight,
-  Church, Play, PlayCircle, Sparkles, ArrowRight,
+  Church, Play, PlayCircle, ArrowRight,
 } from 'lucide-react'
 import { BannerCarousel } from '@/components/banner-carousel'
 import { SectionTitle } from '@/components/section-title'
-import { horariosCultos } from '@/lib/data'
 import {
   getBanners,
   getMinisterios,
@@ -22,11 +21,12 @@ import {
   type CmsTextos,
 } from '@/lib/cms'
 import { getChurch, formatAddressOneLine } from '@/lib/site-data'
+import { getNextEvent, getWeekEvents, countdown, type UpcomingEvent } from '@/lib/next-event'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
-// Próximo culto = próximo domingo 19h
-function useNextService() {
+// Próximo evento inteligente — combina recorrentes + cms_eventos
+function useNextEventCountdown(eventos: CmsEvento[]) {
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
     setNow(new Date())
@@ -35,18 +35,12 @@ function useNextService() {
   }, [])
   return useMemo(() => {
     if (!now) return null
-    const next = new Date(now)
-    const daysToSunday = (7 - now.getDay()) % 7
-    next.setDate(now.getDate() + daysToSunday)
-    next.setHours(19, 0, 0, 0)
-    if (next.getTime() <= now.getTime()) next.setDate(next.getDate() + 7)
-    const diff = Math.max(0, next.getTime() - now.getTime())
-    const d = Math.floor(diff / 86400000)
-    const h = Math.floor((diff % 86400000) / 3600000)
-    const m = Math.floor((diff % 3600000) / 60000)
-    const s = Math.floor((diff % 60000) / 1000)
-    return { d, h, m, s, date: next }
-  }, [now])
+    const nextEvt = getNextEvent(eventos, now)
+    if (!nextEvt) return null
+    const c = countdown(now, nextEvt.datetime)
+    const isImminent = nextEvt.datetime.getTime() - now.getTime() < 24 * 60 * 60 * 1000
+    return { ...c, event: nextEvt, isImminent }
+  }, [now, eventos])
 }
 
 export default function Home() {
@@ -74,7 +68,10 @@ export default function Home() {
     }
   }, [])
 
-  const next = useNextService()
+  const next = useNextEventCountdown(eventos)
+
+  // Eventos da semana para o marquee (filtrado: só futuros desta semana)
+  const weekEvents = useMemo(() => getWeekEvents(eventos), [eventos])
 
   const proximosEventos = [...eventos]
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
@@ -102,7 +99,7 @@ export default function Home() {
           <div className="rounded-2xl bg-surface border border-border shadow-xl shadow-primary/5 p-4 md:p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-destructive/10 text-destructive text-[11px] font-medium">
-                <span className="pulse-dot" /> PRÓXIMO CULTO
+                <span className="pulse-dot" /> {next?.isImminent && next.event ? next.event.title.toUpperCase() : 'PRÓXIMO CULTO'}
               </span>
               <div className="hidden md:block w-px h-8 bg-border" />
             </div>
@@ -131,18 +128,27 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Marquee de horários */}
+          {/* Marquee de horários da semana */}
           <div className="mt-3 overflow-hidden rounded-full border border-border bg-surface">
-            <div className="animate-marquee whitespace-nowrap py-2.5 flex gap-8 pr-8 w-max">
-              {[...horariosCultos, ...horariosCultos].map((c, i) => (
-                <span key={i} className="inline-flex items-center gap-2 text-sm">
-                  <Sparkles className="h-3.5 w-3.5 text-accent" />
-                  <span className="font-medium">{c.dia}</span>
-                  <span className="text-muted-foreground">{c.horario} · {c.tipo}</span>
-                  <span className="text-border">•</span>
-                </span>
-              ))}
-            </div>
+            {weekEvents.length > 0 ? (
+              <div className="animate-marquee whitespace-nowrap py-2.5 flex gap-8 pr-8 w-max">
+                {[...weekEvents, ...weekEvents].map((e, i) => (
+                  <span key={i} className="inline-flex items-center gap-2 text-sm">
+                    <Calendar className="h-3.5 w-3.5 text-accent" />
+                    <span className="font-medium">{e.weekday}</span>
+                    <span className="text-muted-foreground">{e.time} · {e.title}</span>
+                    <span className="text-border">•</span>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="py-2.5 text-center text-sm text-muted-foreground">
+                Sem mais eventos esta semana —{' '}
+                <Link href="/eventos" className="text-primary hover:underline">
+                  veja a programação completa
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
