@@ -8,8 +8,8 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-05-01 (Phase 10 frentes 10.1–10.4 entregues)
-**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.0
+**Última atualização:** 2026-05-02 (Redesign v3 planejado — plano completo por página)
+**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.1
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
 
 > **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
@@ -171,24 +171,49 @@ const generated = generatePassphrase()
 
 ---
 
-## 3. Páginas — status do design
+## 3. Redesign v3 — Plano visual por página
 
-| Rota | Arquivo | Status do design | Precisa do Claude Design? |
-|---|---|---|---|
-| `/` | `app/page.tsx` | ✅ Redesign v2 (editorial) | — |
-| `/quem-somos` | `app/quem-somos/page.tsx` | ⚠️ Design v1 (não recebeu o redesign de 04-24) | Opcional — alinhar com novos tokens |
-| `/historia` | `app/historia/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/visao` | `app/visao/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/pastor` | `app/pastor/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/ministerios` | `app/ministerios/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/eventos` | `app/eventos/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/calendario` | `app/calendario/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/plano-leitura` | `app/plano-leitura/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/contribua` | `app/contribua/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/contato` | `app/contato/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/login` | `app/login/page.tsx` | ⚠️ Design v1 | Opcional |
-| `/admin` | `app/admin/page.tsx` | ⚠️ Design v1 | Opcional |
-| **`/admin/primeiro-acesso`** | `app/admin/primeiro-acesso/page.tsx` | ⚠️ **Funcional mas básico** | ✳️ **SIM** — ver §4.1 |
+> **Referência:** `Home_v2.html` (entregue 2026-05-02)
+> **Direção estética:** Editorial magazine light — Fraunces serif display, JetBrains Mono eyebrows, Inter body. Paleta quente off-white (#FBFAF7) com navy (#0A2973) e cyan (#00C2FF) como destaques. Cards com radius 22-28px, botões pill (radius 999px). Hover lifts com sombra. Gradients sutis. Grain texture em superfícies escuras.
+>
+> **Princípio mobile-first:** a maioria dos visitantes acessa pelo celular. Cada seção tem breakpoint specs explícitos.
+
+### Mudanças globais (afetam todas as páginas)
+
+| Artefato | O que muda |
+|---|---|
+| `styles/globals.css` | Tokens reescritos de oklch → hex brand. Novas utilities (.display, .eyebrow, .btn-primary pill, .btn-ghost pill, .pulse-dot, .schedule-strip, etc). `--background: #FBFAF7`, `--foreground: #0B1020`, `--surface: #FFF`, `--surface-2: #F4F2ED`, `--surface-3: #E9E6DF`, `--primary: #0A2973`, `--accent: #00C2FF`, `--destructive: #FF2A2A`, `--border: #E7E3DB`. Radius base 1rem. |
+| `app/layout.tsx` | Google Fonts → Inter + Fraunces (opsz variable) + JetBrains Mono. font-sans/serif/mono mapping. |
+| `components/layout/header.tsx` | Sticky glass-effect (backdrop-blur). Brand mark "C" com glow conic. Nav links pill hover. ⌘K command palette. Mobile drawer full-screen com numeração /01 /02. Botão "Visite-nos" pill. |
+| `components/layout/footer.tsx` | Dark bg (foreground). CTA "Há um assento esperando por você" com Fraunces italic + accent em "assento". 4 colunas de links. Wordmark "Canaã" gigante (5-20vw, opacity 5%). Bottom bar com CNPJ + cidade. |
+
+### Página por página
+
+| # | Rota | Status atual | Plano de redesign v3 | Prioridade |
+|---|---|---|---|---|
+| 1 | `/` (Home) | v2 editorial (escuro, carrossel) | **Reescrever inteira.** Hero: título Fraunces clamp(56px,9vw,132px) esquerda + countdown card (navy gradient, grain) direita. Sem carrossel — card estático mostra próximo evento do CMS. Marquee strip (foreground bg, faixa preta pill com scroll infinito). Welcome: grid 5/7 sticky left + pilares 4-col. Pastor: seção com bg surface-2 + retrato 4:5 com name card. Ministérios: grid 3-col com filtro rail pill. Eventos: seção escura (foreground bg) com lista editorial (data grande + título + meta). Duo: 2 cards (plano leitura dark + contribua light). Versículo: full-bleed escuro com Fraunces italic gigante. Visit CTA: card com mapa placeholder + info rows. | 🔴 |
+| 2 | `/quem-somos` | v1 genérico | Hero editorial com título Fraunces + eyebrow "— Quem somos". Grid de valores (pilares). Timeline resumida. CTA para /historia. | 🟡 |
+| 3 | `/historia` | v1 + timeline do CMS | Manter timeline funcional. Redesenhar: eyebrow + título Fraunces. Cards da timeline com ano grande (Fraunces), foto radius 22px, descrição. Citação bíblica em bloco accent. | 🟡 |
+| 4 | `/visao` | v1 genérico | Layout editorial 2-col: missão/visão/propósito em cards com ícone e numeração mono. Versículo de destaque em bloco full-width escuro. | 🟡 |
+| 5 | `/pastor` | v1 + foto do CMS | Seção hero com retrato 4:5 (border-radius 28px, sombra), tag "Pastor presidente" com pulse-dot. Grid 5/7 com bio. Quote block com borda accent. CTAs pill. | 🟡 |
+| 6 | `/ministerios` | v1 + leaders popover | Grid 3-col com filter rail pill (categorias). Cards: imagem 4:3 com numeração mono + badge categoria. Body: nome Fraunces + descrição + leaders. Hover lift + arrow rotate. | 🟡 |
+| 7 | `/eventos` | v1 + lista do CMS | Seção escura (como na home). Lista editorial: data grande (dia Fraunces + mês mono) + título + descrição + meta (horário/local) + arrow. Filtro por categoria. | 🟡 |
+| 8 | `/calendario` | v1 + react-day-picker | Manter calendário funcional. Redesenhar header com eyebrow + título Fraunces. Cards de eventos do dia selecionado com novo estilo. | 🟢 |
+| 9 | `/plano-leitura` | v1 + progresso localStorage | Card escuro (navy gradient) como hero com progresso. Grid de dias com checked state. Animação de confetti/celebrate ao completar. | 🟢 |
+| 10 | `/contribua` | v1 + PIX do CMS | Card light com ícone PIX grid pattern. Chave copiável com feedback. Informações bancárias. CTA para contato. | 🟢 |
+| 11 | `/contato` | v1 + formulário real (11.1) | Card split: mapa/foto esquerda + formulário direita. Info rows (endereço/cultos/contato) como na visit section da home. Botão WhatsApp verde. | 🟢 |
+| 12 | `/login` | v1 funcional | Layout centralizado limpo. Logo + card de login com sombra. Link "Esqueceu a senha?" (preparar pra 11.3). | 🟢 |
+| 13 | `/admin` | funcional, tokens atuais | Não redesenhar na v3 — é interno. Manter tokens atualizados para consistência mínima. | ⚪ |
+| 14 | `/admin/primeiro-acesso` | funcional, básico | Mesmo que /login — layout centralizado limpo. | ⚪ |
+
+### Ordem de implementação
+
+1. **globals.css** — tokens + utilities (base pra tudo)
+2. **header.tsx** — afeta todas as páginas
+3. **footer.tsx** — afeta todas as páginas
+4. **Home** (`app/page.tsx` + `components/banner-carousel.tsx` removido) — vitrine principal
+5. Páginas internas em lote (quem-somos → historia → visao → pastor → ministerios → eventos)
+6. Páginas secundárias (calendario → plano-leitura → contribua → contato → login)
 
 > **Nota:** o redesign de 2026-04-24 cobriu `/`, header, footer, banner-carousel e section-title. As páginas internas continuam no estilo v1 (mais formal, com Merriweather+SectionTitle decorativo). Como elas usam `<SectionTitle>` e `<Header>/<Footer>` já redesenhados, a estética está **consistente o suficiente**, só não foi reformulada editorialmente. Aplicar o redesign nas internas é trabalho de Phase futura ou pedido específico ao Claude Design.
 
@@ -487,18 +512,15 @@ Se algum `data-testid` ou prop do `<PasswordStrength>` mudou, os testes em `__te
 
 ---
 
-## 8. Roadmap de novos designs (futuro)
+## 8. Roadmap de redesign v3
 
-Conforme as fases avançam, o backend vai abrir tickets aqui com o que precisa de UI:
-
-| Fase | UI nova prevista | Status |
+| Entrega | Escopo | Status |
 |---|---|---|
-| 3 | `/admin/primeiro-acesso`, `<PasswordStrength>` | **Aberto — §4.1, §4.2** (funcionais; polish opcional) |
-| 4 | `<AvisoBanner>`, aba "Avisos" em `/admin` | ✅ **Entregue 2026-04-25** — funcional, polish opcional (§4.3) |
-| 5 | Calendário refatorado, lista de eventos, cards de ministérios | Pendente |
-| 6 | Aba "Igreja" + "Pastor" em `/admin` (forms) | Pendente |
-| 7 | Nada de UI — só SEO (metadata, sitemap, robots) | — |
-| 8 | Login com recuperação de senha, UI pra admin convidar conteudistas | Pendente |
+| v3.1 | `globals.css` tokens + utilities | ⏳ Próximo |
+| v3.2 | `header.tsx` + `footer.tsx` | ⏳ |
+| v3.3 | Home (`app/page.tsx`) — hero editorial + countdown card + marquee + seções | ⏳ |
+| v3.4 | Páginas internas: quem-somos, historia, visao, pastor, ministerios, eventos | ⏳ |
+| v3.5 | Páginas secundárias: calendario, plano-leitura, contribua, contato, login | ⏳ |
 
 ---
 
