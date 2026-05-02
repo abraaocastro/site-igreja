@@ -66,6 +66,7 @@ export interface CmsEvento {
   description: string
   date: string // YYYY-MM-DD
   time: string
+  endTime: string
   location: string
   category: string
   imageUrl: string | null
@@ -175,6 +176,7 @@ interface EventoRow {
   description: string
   date: string
   time: string
+  end_time: string
   location: string
   category: string
   image_url: string | null
@@ -185,6 +187,7 @@ const eventoFromRow = (r: EventoRow): CmsEvento => ({
   description: r.description,
   date: r.date,
   time: r.time,
+  endTime: r.end_time,
   location: r.location,
   category: r.category,
   imageUrl: r.image_url,
@@ -194,6 +197,7 @@ const eventoToRow = (e: Partial<CmsEvento>): Partial<EventoRow> => ({
   ...(e.description !== undefined && { description: e.description }),
   ...(e.date !== undefined && { date: e.date }),
   ...(e.time !== undefined && { time: e.time }),
+  ...(e.endTime !== undefined && { end_time: e.endTime }),
   ...(e.location !== undefined && { location: e.location }),
   ...(e.category !== undefined && { category: e.category }),
   ...(e.imageUrl !== undefined && { image_url: e.imageUrl }),
@@ -305,6 +309,7 @@ const DEFAULT_EVENTOS: CmsEvento[] = defaultEventos.map((e) => ({
   description: e.description,
   date: e.date,
   time: e.time,
+  endTime: '20:00',
   location: e.location,
   category: e.category,
   imageUrl: e.imageUrl,
@@ -364,7 +369,7 @@ export async function getEventos(): Promise<CmsEvento[]> {
   return safeRead(async (sb) => {
     const { data, error } = await sb
       .from('cms_eventos')
-      .select('id,title,description,date,time,location,category,image_url')
+      .select('id,title,description,date,time,end_time,location,category,image_url')
       .order('date', { ascending: true })
     if (error || !data || data.length === 0) return DEFAULT_EVENTOS
     return data.map(eventoFromRow)
@@ -670,7 +675,7 @@ export async function upsertEvento(e: CmsEvento): Promise<CmsEvento> {
     const { data, error } = await sb
       .from('cms_eventos')
       .insert(payload)
-      .select('id,title,description,date,time,location,category,image_url')
+      .select('id,title,description,date,time,end_time,location,category,image_url')
       .single()
     if (error) throw error
     return eventoFromRow(data as EventoRow)
@@ -679,7 +684,7 @@ export async function upsertEvento(e: CmsEvento): Promise<CmsEvento> {
       .from('cms_eventos')
       .update(payload)
       .eq('id', e.id)
-      .select('id,title,description,date,time,location,category,image_url')
+      .select('id,title,description,date,time,end_time,location,category,image_url')
       .single()
     if (error) throw error
     return eventoFromRow(data as EventoRow)
@@ -691,7 +696,7 @@ export async function createEvento(e: Omit<CmsEvento, 'id'>): Promise<CmsEvento>
   const { data, error } = await sb
     .from('cms_eventos')
     .insert(eventoToRow(e))
-    .select('id,title,description,date,time,location,category,image_url')
+    .select('id,title,description,date,time,end_time,location,category,image_url')
     .single()
   if (error) throw error
   return eventoFromRow(data as EventoRow)

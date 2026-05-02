@@ -22,6 +22,7 @@ import {
 } from '@/lib/cms'
 import { getChurch, formatAddressOneLine } from '@/lib/site-data'
 import { getNextEvent, getWeekEvents, countdown, type UpcomingEvent } from '@/lib/next-event'
+import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -37,9 +38,26 @@ function useNextEventCountdown(eventos: CmsEvento[]) {
     if (!now) return null
     const nextEvt = getNextEvent(eventos, now)
     if (!nextEvt) return null
+
+    const started = now.getTime() >= nextEvt.datetime.getTime()
+    const ended = now.getTime() >= nextEvt.endDatetime.getTime()
+
+    if (ended) {
+      // Evento acabou mas getNextEvent ainda o retornou (race condition)
+      // Forçar zeros — no próximo tick o getNextEvent vai pular pro próximo
+      return { d: 0, h: 0, m: 0, s: 0, event: nextEvt, isImminent: false, isLive: false }
+    }
+
+    if (started) {
+      // Evento em andamento — mostrar como "ao vivo"
+      const c = countdown(now, nextEvt.endDatetime)
+      return { ...c, event: nextEvt, isImminent: true, isLive: true }
+    }
+
+    // Evento ainda não começou — countdown normal até o início
     const c = countdown(now, nextEvt.datetime)
     const isImminent = nextEvt.datetime.getTime() - now.getTime() < 24 * 60 * 60 * 1000
-    return { ...c, event: nextEvt, isImminent }
+    return { ...c, event: nextEvt, isImminent, isLive: false }
   }, [now, eventos])
 }
 
@@ -98,8 +116,18 @@ export default function Home() {
         <div className="relative mt-6 md:-mt-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-20">
           <div className="rounded-2xl bg-surface border border-border shadow-xl shadow-primary/5 p-4 md:p-5 grid md:grid-cols-[auto_1fr_auto] gap-4 items-center">
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2 px-3 h-7 rounded-full bg-destructive/10 text-destructive text-[11px] font-medium">
-                <span className="pulse-dot" /> {next?.isImminent && next.event ? next.event.title.toUpperCase() : 'PRÓXIMO CULTO'}
+              <span className={cn(
+                'inline-flex items-center gap-2 px-3 h-7 rounded-full text-[11px] font-medium',
+                next?.isLive
+                  ? 'bg-destructive/20 text-destructive animate-pulse'
+                  : 'bg-destructive/10 text-destructive'
+              )}>
+                <span className="pulse-dot" />
+                {next?.isLive
+                  ? 'AO VIVO'
+                  : next?.isImminent && next.event
+                    ? next.event.title.toUpperCase()
+                    : 'PRÓXIMO CULTO'}
               </span>
               <div className="hidden md:block w-px h-8 bg-border" />
             </div>

@@ -969,7 +969,8 @@ function EventosEditor({
           { key: 'title', label: 'Título', type: 'text' },
           { key: 'description', label: 'Descrição', type: 'textarea' },
           { key: 'date', label: 'Data', type: 'date' },
-          { key: 'time', label: 'Horário', type: 'time' },
+          { key: 'time', label: 'Início', type: 'time' },
+          { key: 'endTime', label: 'Término', type: 'time' },
           { key: 'location', label: 'Local', type: 'text' },
           {
             key: 'category',
@@ -984,6 +985,7 @@ function EventosEditor({
           description: '',
           date: filterDate || new Date().toISOString().slice(0, 10),
           time: '19:00',
+          endTime: '20:30',
           location: 'Templo Principal',
           category: 'evento',
           imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=600&q=80',
