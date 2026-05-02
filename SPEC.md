@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 3.0 (2026-05-01)
-**Status:** Phases 1–4, 7, 8, 9 ✅ concluídas. **Phase 10** (refinos do admin) **em execução** — frentes 10.1–10.4 entregues (convite users, calendar preview, plano leitura editável, multi-líderes). Faltam: 10.5 (HelpHints restantes) + 10.6–10.9 (bugs reportados).
+**Versão:** 3.1 (2026-05-02)
+**Status:** Phases 1–4, 7, 8, 9, 10 ✅ concluídas. **Phase 11** (qualidade, robustez e polimento) **especificada** — 7 frentes: formulário de contato real, otimização de imagens, recuperação de senha, prompt edições não salvas, skeletons, refactor admin, cleanup de eventos.
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -702,6 +702,161 @@ string curta (ex: `"hero-1"`, `"culto"`). Depois da migração pro CMS,
 
 ---
 
+### Phase 11 — Qualidade, robustez e polimento
+
+**Objetivo:** resolver falhas funcionais reais que afetam a experiência dos visitantes e a confiabilidade do admin. Não é visual — é infraestrutura que faltava.
+
+**Princípio:** tudo que um visitante com 3G em Capim Grosso precisa funcionar, precisa funcionar de verdade.
+
+#### 11.1. Formulário de contato real
+
+**Problema:** o formulário de `/contato` faz um `setTimeout(900ms)` e mostra "Mensagem enviada!" sem enviar nada. O visitante pensa que entrou em contato, mas a mensagem se perde. Isso é pior que não ter formulário.
+
+**Fix (estratégia dupla, decidida pelo que o admin configurou):**
+
+a) **Se existe WhatsApp cadastrado** (`contatoWhatsapp` via `cms_textos`): o formulário monta a mensagem formatada e redireciona pro `wa.me` com o texto pré-preenchido. O visitante termina o contato no WhatsApp. É a opção mais natural para a realidade de uma igreja no interior.
+
+b) **Se existe e-mail cadastrado** (`contatoEmail` via `cms_textos`): API route `app/api/contato/route.ts` recebe o form e envia via Resend/Nodemailer/SMTP ou simplesmente salva numa tabela `cms_contato_mensagens` no Supabase para o admin ver no painel.
+
+c) **Se nenhum está configurado:** formulário mostra mensagem honesta — "Entre em contato pelo Instagram @pibaccapimgrosso" — em vez de fingir envio.
+
+**Escopo técnico:**
+- API route `app/api/contato/route.ts` — recebe POST, valida campos, decide destino
+- Tabela `cms_contato_mensagens` (id, nome, email, telefone, assunto, mensagem, lido boolean, created_at) com RLS (admin lê, anon insere)
+- Migration `008_contato_mensagens.sql`
+- Refatorar `app/contato/page.tsx` — `onSubmit` real
+- Aba **Mensagens** no admin (read-only, marcar como lida, contador de não-lidas no badge da aba)
+- Fallback WhatsApp: se WhatsApp configurado, botão "Enviar via WhatsApp" aparece ao lado do "Enviar"
+
+**Tasks:**
+- [ ] 11.1.a — Migration `008_contato_mensagens.sql` + RLS
+- [ ] 11.1.b — API route `app/api/contato/route.ts` (POST salva no banco)
+- [ ] 11.1.c — Refatorar `/contato` com submit real + fallback WhatsApp
+- [ ] 11.1.d — Aba "Mensagens" no admin com listagem + badge de não-lidas
+- [ ] 11.1.e — Testes da API route + componente
+
+#### 11.2. Otimização de imagens
+
+**Problema:** `pastor-silas.png` na `/public` tem 1.2MB. Imagens do bucket Supabase não passam por resize. Em conexão 3G no interior da Bahia, isso degrada severamente a experiência.
+
+**Fix:**
+- Comprimir imagens estáticas em `/public` (pastor, logo) para WebP ≤200KB
+- `uploadImage()` em `lib/cms.ts`: antes de subir pro bucket, redimensionar no client para max 1200px de largura e converter pra WebP usando Canvas API
+- Todas as `<img>` e `<Image>` devem ter `sizes` e `srcSet` apropriados
+- Imagens no carousel (heroBanners) recebem `priority` no first slide, `loading="lazy"` nos demais
+
+**Tasks:**
+- [ ] 11.2.a — Comprimir `/public/pastor-silas.png` e demais estáticas para WebP
+- [ ] 11.2.b — `lib/image-utils.ts` com `resizeAndCompress(file, maxWidth, quality)` usando Canvas
+- [ ] 11.2.c — `uploadImage()` usa `resizeAndCompress` antes do upload
+- [ ] 11.2.d — Auditar `<Image>` em todas as páginas: adicionar `sizes`, `priority` no hero
+
+#### 11.3. Recuperação de senha via UI
+
+**Problema:** se conteudista esquece a senha, a única opção é rodar `npm run bootstrap:admin` no terminal. Não existe fluxo "esqueci minha senha".
+
+**Fix:**
+- Página `/login/recuperar` com campo de e-mail
+- Chama `supabase.auth.resetPasswordForEmail(email, { redirectTo })` (funcionalidade nativa do Supabase)
+- Página `/login/nova-senha` recebe o token da URL e permite definir nova senha (com `<PasswordStrength>`)
+- Link "Esqueceu a senha?" na página de login
+- **Pré-requisito:** configurar o template de e-mail de reset no Supabase Dashboard (Settings → Auth → Email Templates)
+
+**Tasks:**
+- [ ] 11.3.a — `app/login/recuperar/page.tsx` (form de e-mail + chamada Supabase)
+- [ ] 11.3.b — `app/login/nova-senha/page.tsx` (recebe token, troca senha, redireciona pro login)
+- [ ] 11.3.c — Link "Esqueceu a senha?" no `/login`
+- [ ] 11.3.d — Documentar setup do template de e-mail no Supabase
+
+#### 11.4. Prompt "edições não salvas" no admin
+
+**Problema:** o admin pode fechar a aba, trocar de tab no painel, ou navegar pra fora com edições não salvas. Tudo se perde sem aviso.
+
+**Fix:**
+- Hook `useUnsavedChanges(dirty: boolean)` que registra `beforeunload` quando `dirty=true`
+- Ao clicar em outra aba do admin com `dirty=true`, mostrar confirm dialog: "Você tem alterações não salvas. Deseja sair sem salvar?"
+- Aplicar em: IgrejaEditor, PastorEditor, TextosEditor, AvisosEditor (os que têm `dirty` state)
+
+**Tasks:**
+- [ ] 11.4.a — Hook `hooks/use-unsaved-changes.ts`
+- [ ] 11.4.b — Integrar nos 4 editores com dirty state
+- [ ] 11.4.c — Confirm dialog ao trocar de aba no admin
+
+#### 11.5. Loading skeletons nas páginas públicas
+
+**Problema:** todas as páginas são `'use client'` e fazem fetch via `useEffect`. O visitante vê seções vazias por 1-2s antes do conteúdo aparecer. Google também vê conteúdo vazio no primeiro crawl.
+
+**Fix:**
+- Componente `components/skeleton.tsx` com variantes (card, text-block, banner, timeline-item)
+- Cada página que faz fetch mostra skeleton durante `loading` state
+- Os defaults estáticos de `lib/data.ts` já hidratam o estado inicial — skeleton aparece só se o fetch do Supabase demorar mais que o normal (>500ms)
+
+**Tasks:**
+- [ ] 11.5.a — `components/skeleton.tsx` com variantes reutilizáveis
+- [ ] 11.5.b — Aplicar em home (banners, ministérios, eventos)
+- [ ] 11.5.c — Aplicar em `/ministerios`, `/eventos`, `/calendario`, `/plano-leitura`, `/historia`
+
+#### 11.6. Extrair editores do admin em arquivos separados
+
+**Problema:** `app/admin/page.tsx` tem ~2100 linhas com 10+ editores inline. Cada edição corre risco de quebrar outro editor. Difícil de navegar e manter.
+
+**Fix:**
+- Criar `components/admin/editors/` com um arquivo por editor:
+  - `banners-editor.tsx`
+  - `ministerios-editor.tsx`
+  - `eventos-editor.tsx`
+  - `avisos-editor.tsx`
+  - `textos-editor.tsx`
+  - `igreja-editor.tsx`
+  - `pastor-editor.tsx`
+  - `historia-editor.tsx`
+  - `plano-leitura-editor.tsx`
+  - `usuarios-editor.tsx`
+  - `mensagens-editor.tsx` (novo da 11.1)
+- `CardsEditor` e `FieldEditor` viram `components/admin/cards-editor.tsx` e `components/admin/field-editor.tsx`
+- `app/admin/page.tsx` fica só com: layout, tabs, state management e imports dos editores
+- **Meta:** `page.tsx` reduz de ~2100 para ~300 linhas
+
+**Tasks:**
+- [ ] 11.6.a — Extrair `CardsEditor` + `FieldEditor` para `components/admin/`
+- [ ] 11.6.b — Extrair cada editor para arquivo próprio
+- [ ] 11.6.c — Refatorar `app/admin/page.tsx` como orquestrador fino
+- [ ] 11.6.d — Verificar que build + typecheck passam
+
+#### 11.7. Cleanup de eventos passados
+
+**Problema:** eventos que já passaram ficam no banco para sempre. Em 1 ano pode ter 200+ eventos velhos, degradando a performance do calendário e da listagem.
+
+**Fix:**
+- Coluna `archived boolean DEFAULT false` em `cms_eventos` (migration)
+- Cron ou batch: eventos com `date < hoje - 90 dias` são marcados como `archived=true` automaticamente
+- Queries de leitura pública filtram `WHERE archived = false`
+- No admin aba Eventos, toggle "Mostrar arquivados" (desligado por default)
+- Admin pode desarquivar manualmente se necessário
+
+**Tasks:**
+- [ ] 11.7.a — Migration `009_evento_archived.sql`
+- [ ] 11.7.b — Atualizar queries em `lib/cms.ts` para filtrar archived
+- [ ] 11.7.c — Botão "Arquivar" e toggle "Mostrar arquivados" no EventosEditor
+- [ ] 11.7.d — Script ou Supabase Edge Function para auto-archive em batch
+
+---
+
+**Checklist de aceitação da Phase 11:**
+
+- [ ] Formulário de contato salva mensagem no banco e admin consegue ler no painel
+- [ ] WhatsApp redirect funciona quando WhatsApp está configurado
+- [ ] Imagens estáticas ≤200KB cada; uploads do admin redimensionados antes de subir
+- [ ] Fluxo "esqueci minha senha" funciona ponta-a-ponta (enviar e-mail → link → nova senha)
+- [ ] Fechar aba com edições não salvas mostra aviso do browser
+- [ ] Trocar de aba no admin com edições pendentes pede confirmação
+- [ ] Páginas públicas mostram skeleton enquanto carregam
+- [ ] `app/admin/page.tsx` tem ≤400 linhas
+- [ ] Eventos com 90+ dias são arquivados e não poluem calendário público
+- [ ] `npm run typecheck` + `npm test` + `npm run build` passam
+
+---
+
 ## 6. Riscos e decisões arquiteturais
 
 | Risco | Mitigação |
@@ -737,11 +892,12 @@ string curta (ex: `"hero-1"`, `"culto"`). Depois da migração pro CMS,
 - [x] **Phase 7 — SEO local** (concluída — metadata por rota + sitemap + robots + JSON-LD + a11y básica)
 - [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
 - [x] **Phase 9 — Cobertura total do admin** (concluída — Igreja/Pastor/História editáveis via `cms_textos` KV + nova tabela `cms_historia`. Container "valor sugerido" removido de /contribua. 10 testes novos, 69 totais.)
-- [ ] **Phase 10 — Refinos do admin** (em execução — convite de usuários, calendar preview, plano de leitura editável, multi-líderes, HelpHints. HelpHint component + remoção de dev notes já feitos.)
+- [x] **Phase 10 — Refinos do admin** (concluída — convite de usuários, calendar preview, plano de leitura editável, multi-líderes, HelpHints, contador inteligente, botão Assistir configurável, marquee dinâmico, pré-headline editável, horário de término nos eventos.)
+- [ ] **Phase 11 — Qualidade, robustez e polimento** (especificada — 7 frentes: formulário de contato real, otimização de imagens, recuperação de senha, prompt edições não salvas, skeletons, refactor admin, cleanup de eventos.)
 - [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8**
 - [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8 + 9**
 
-**MVP em produção, Phase 10 em curso.** Após 10 estará 100% completo pelo plano original (e algumas extensões). Próximos passos opcionais pós-10: recuperação de senha, analytics, drag-and-drop pra reordenar.
+**MVP em produção, Phase 10 concluída, Phase 11 especificada.** O site está funcional e editável, mas a Phase 11 resolve falhas reais de qualidade (formulário fake, imagens pesadas, sem recuperação de senha).
 
 ### Pendências de conteúdo (não-código)
 
@@ -759,6 +915,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-05-02 | 3.1 | Phase 10 concluída (10.5–10.9 entregues + horário de término nos eventos). Phase 11 especificada: 7 frentes de qualidade e robustez (formulário de contato real com fallback WhatsApp + tabela cms_contato_mensagens, otimização de imagens com resize no upload, recuperação de senha via UI, prompt de edições não salvas, loading skeletons, refactor do admin monolítico em arquivos separados, auto-archive de eventos passados). |
 | 2026-05-01 | 3.0 | Frentes 10.1–10.4 entregues: convite de conteudistas (API route + aba admin + senha gerada), calendar preview no EventosEditor (lib/calendar-utils + filtro por dia), plano de leitura editável (migration 004 + CRUD + aba admin + página pública lê do DB), múltiplos líderes por ministério (migration 005 leaders jsonb + backfill + LeadersDisplay popover + CardsEditor.renderExtra). Fix RLS recursão em profiles_admin_read_all. |
 | 2026-04-28 | 2.9 | Phase 10 ganhou +1 frente (10.9): pré-headline editável em `cms_banners`. UUID estava vazando pro design via `banner.id.toUpperCase()` no eyebrow. Fix: nova coluna `pre_headline text` nullable + campo no admin + render condicional. |
 | 2026-04-28 | 2.8 | Phase 10 ganhou 3 frentes novas (10.6, 10.7, 10.8) a partir de bugs reportados pelo stakeholder: contador "próximo culto" hardcoded ignorando `cms_eventos`, botão "Assistir" sem URL configurável, marquee mostrando horários passados + ícone Sparkles ✨ que parece IA. Cada item tem causa raiz + fix proposto + tasks. |
