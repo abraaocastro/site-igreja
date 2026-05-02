@@ -890,14 +890,20 @@ export async function deleteMensagem(id: string): Promise<void> {
 
 /**
  * Faz upload de um arquivo pra `public-images` bucket e retorna a URL
- * pública. Path: `cms/<timestamp>-<sanitized-filename>`.
+ * pública. Antes de subir, redimensiona pra max 1200px de largura e
+ * converte pra WebP (se o browser suportar).
  *
+ * Path: `cms/<timestamp>-<sanitized-filename>`.
  * Precisa do user logado (RLS bloqueia upload anônimo).
  */
 export async function uploadImage(file: File): Promise<string> {
+  // Importação dinâmica pra não quebrar SSR (Canvas API é browser-only)
+  const { resizeAndCompress } = await import('@/lib/image-utils')
+  const compressed = await resizeAndCompress(file, 1200, 0.82)
+
   const sb = writerClient()
   const ts = Date.now()
-  const safe = file.name
+  const safe = compressed.name
     .toLowerCase()
     .replace(/[^a-z0-9.-]/g, '-')
     .replace(/-+/g, '-')
@@ -905,8 +911,8 @@ export async function uploadImage(file: File): Promise<string> {
 
   const { error: uploadErr } = await sb.storage
     .from('public-images')
-    .upload(path, file, {
-      contentType: file.type,
+    .upload(path, compressed, {
+      contentType: compressed.type,
       upsert: false,
     })
   if (uploadErr) throw uploadErr

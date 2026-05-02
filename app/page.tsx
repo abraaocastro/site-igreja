@@ -255,7 +255,7 @@ export default function Home() {
             <div className="lg:col-span-5">
               <div className="relative aspect-[4/5] rounded-3xl overflow-hidden border border-border bg-brand-gradient">
                 <Image
-                  src="/pastor-silas.png"
+                  src="/pastor-silas.webp"
                   alt="Pr. Silas"
                   fill
                   sizes="(min-width: 1024px) 40vw, 100vw"
