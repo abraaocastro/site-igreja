@@ -122,9 +122,27 @@ export default function Home() {
               <Link href="/calendario" className="btn-ghost h-10 text-sm">
                 Agenda <Calendar className="h-4 w-4" />
               </Link>
-              <Link href="/eventos" className="btn-primary h-10 text-sm">
-                <Play className="h-4 w-4" /> Assistir
-              </Link>
+              {(() => {
+                const url = textos.botaoAssistirUrl || '/eventos'
+                const label = textos.botaoAssistirRotulo || 'Assistir'
+                const aoVivo = textos.botaoAssistirAoVivo === 'true'
+                const isExternal = url.startsWith('http')
+                const cls = aoVivo
+                  ? 'btn-primary h-10 text-sm bg-destructive hover:bg-destructive/90 animate-pulse'
+                  : 'btn-primary h-10 text-sm'
+                if (isExternal) {
+                  return (
+                    <a href={url} target="_blank" rel="noreferrer" className={cls}>
+                      <Play className="h-4 w-4" /> {aoVivo ? '🔴 ' : ''}{label}
+                    </a>
+                  )
+                }
+                return (
+                  <Link href={url} className={cls}>
+                    <Play className="h-4 w-4" /> {aoVivo ? '🔴 ' : ''}{label}
+                  </Link>
+                )
+              })()}
             </div>
           </div>
 

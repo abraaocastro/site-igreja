@@ -98,6 +98,9 @@ export const DEFAULT_TEXTOS: CmsTextos = {
   versiculoDestaque:
     'Porque Deus amou o mundo de tal maneira que deu o seu Filho unigênito, para que todo aquele que nele crê não pereça, mas tenha a vida eterna.',
   versiculoReferencia: 'João 3:16',
+  botaoAssistirUrl: '/eventos',
+  botaoAssistirRotulo: 'Assistir',
+  botaoAssistirAoVivo: 'false',
 }
 
 const DEFAULT_AVISO: ChurchAviso = {
@@ -438,6 +441,7 @@ export const CHURCH_TEXTOS_KEYS = {
   pastor: ['pastorNome', 'pastorTitulo', 'pastorBio', 'pastorFoto', 'pastorInstagram'] as const,
   pix: ['pixChave', 'pixTipo', 'pixTitular'] as const,
   historia: ['historiaIntroTitulo', 'historiaIntroSubtitulo', 'historiaIntroTexto', 'historiaCitacao', 'historiaCitacaoRef', 'historiaCitacaoTexto'] as const,
+  hero: ['botaoAssistirUrl', 'botaoAssistirRotulo', 'botaoAssistirAoVivo'] as const,
 } as const
 
 /**

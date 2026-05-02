@@ -1333,7 +1333,7 @@ const IGREJA_FIELDS: Array<{
   key: string
   label: string
   placeholder?: string
-  group: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'
+  group: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix' | 'hero'
   type?: 'text' | 'textarea' | 'image'
   hint?: string
 }> = [
@@ -1366,15 +1366,20 @@ const IGREJA_FIELDS: Array<{
   { group: 'pix', key: 'pixChave', label: 'Chave PIX' },
   { group: 'pix', key: 'pixTipo', label: 'Tipo (email/cpf/cnpj/telefone/aleatoria)', placeholder: 'email' },
   { group: 'pix', key: 'pixTitular', label: 'Titular da conta' },
+  // Botão Assistir (hero da home)
+  { group: 'hero', key: 'botaoAssistirUrl', label: 'URL do botão Assistir', placeholder: '/eventos ou https://youtube.com/...' },
+  { group: 'hero', key: 'botaoAssistirRotulo', label: 'Rótulo do botão', placeholder: 'Assistir' },
+  { group: 'hero', key: 'botaoAssistirAoVivo', label: 'Ao vivo agora? (true/false)', placeholder: 'false' },
 ]
 
-const IGREJA_GROUPS: Array<{ id: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix'; title: string; description: string }> = [
+const IGREJA_GROUPS: Array<{ id: 'marca' | 'identidade' | 'endereco' | 'contato' | 'social' | 'pix' | 'hero'; title: string; description: string }> = [
   { id: 'marca', title: 'Logotipo e marca', description: 'Logo (PNG sem fundo recomendado) e textos do cabeçalho/rodapé.' },
   { id: 'identidade', title: 'Identidade', description: 'Como a igreja se chama e se apresenta.' },
   { id: 'endereco', title: 'Endereço', description: 'Onde fica fisicamente.' },
   { id: 'contato', title: 'Contato', description: 'Telefone, WhatsApp e e-mail oficial.' },
   { id: 'social', title: 'Redes sociais', description: 'Links das contas oficiais.' },
   { id: 'pix', title: 'PIX', description: 'Chave PIX para contribuições. Aparece em /contribua.' },
+  { id: 'hero', title: 'Botão Assistir', description: 'Link e rótulo do botão "Assistir" que fica no topo da home. Pode apontar pro YouTube ou qualquer URL.' },
 ]
 
 function IgrejaEditor({
