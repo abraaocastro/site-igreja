@@ -826,6 +826,7 @@ function BannersEditor({
       title="Banners do Carrossel"
       description="Edite títulos, imagens e chamadas dos banners da página inicial."
       preview={(b) => ({ title: b.title, subtitle: b.subtitle ?? undefined, imageUrl: b.imageUrl })}
+      help={{ label: 'Sobre os banners', body: 'Os banners aparecem no carrossel da página inicial. Cada um tem uma imagem de fundo, título, subtítulo e um botão com link. O visitante pode arrastar para ver os próximos banners.' }}
     />
   )
 }
@@ -862,6 +863,7 @@ function MinisteriosEditor({
       title="Ministérios"
       description="Atualize imagens, líderes e descrições dos cards de ministérios."
       preview={(m) => ({ title: m.name, subtitle: m.description, imageUrl: m.imageUrl })}
+      help={{ label: 'Sobre os ministérios', body: 'Cada ministério vira um card na página /ministérios e na seção de ministérios da home. Você pode adicionar vários líderes por ministério — se houver mais de um, o site exibe um botão "Liderança" que abre a lista completa.' }}
       renderExtra={(item, onChange) => (
         <LeadersField
           leaders={item.leaders ?? []}
@@ -993,6 +995,7 @@ function EventosEditor({
           time: e.time,
           imageUrl: e.imageUrl,
         })}
+        help={{ label: 'Sobre os eventos', body: 'Os eventos aparecem no calendário público, na página /eventos e na home. Use o mini-calendário acima para filtrar por dia. A categoria define a cor do ponto no calendário.' }}
       />
     </div>
   )
@@ -1068,6 +1071,9 @@ function AvisosEditor({
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <Megaphone className="h-5 w-5 text-primary" />
           Avisos globais
+          <HelpHint label="Sobre os avisos">
+            Quando ativado, um banner colorido aparece no topo de todas as páginas do site. Use para comunicar eventos importantes, mudanças de horário ou avisos urgentes. O visitante pode fechar o aviso clicando no X.
+          </HelpHint>
         </h2>
         <p className="text-sm text-muted-foreground">
           Banner exibido no topo de todas as páginas. Salvo no banco — visível
@@ -1266,7 +1272,12 @@ function TextosEditor({
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold text-foreground">Textos do Site</h2>
+        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+          Textos do Site
+          <HelpHint label="Sobre os textos do site">
+            Esses textos aparecem na página inicial: o título e subtítulo de boas-vindas, e o versículo em destaque com sua referência bíblica.
+          </HelpHint>
+        </h2>
         <p className="text-sm text-muted-foreground">
           Edite os principais blocos de texto da página inicial.
         </p>
@@ -1413,6 +1424,9 @@ function IgrejaEditor({
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <Building2 className="h-5 w-5 text-primary" />
           Dados da Igreja
+          <HelpHint label="Sobre os dados da igreja">
+            Esses dados aparecem em várias partes do site: rodapé, página de contato, página de contribuição e nos metadados para Google. Ao salvar, todas as páginas são atualizadas automaticamente.
+          </HelpHint>
         </h2>
         <p className="text-sm text-muted-foreground">
           Endereço, contatos, redes sociais e PIX. Tudo aqui aparece nas páginas <code>/contato</code>,{' '}
@@ -1540,6 +1554,9 @@ function PastorEditor({
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <UserCircle2 className="h-5 w-5 text-primary" />
           Pastor
+          <HelpHint label="Sobre os dados do pastor">
+            Os dados do pastor aparecem na página /pastor e em cards do site. A bio aceita múltiplos parágrafos — separe com uma linha em branco. A foto aparece ao lado da biografia.
+          </HelpHint>
         </h2>
         <p className="text-sm text-muted-foreground">
           Dados que aparecem na página <code>/pastor</code> e nos cards do site.
@@ -1693,6 +1710,9 @@ function HistoriaEditor({
         <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
           <History className="h-5 w-5 text-primary" />
           Página /história
+          <HelpHint label="Sobre a página de história">
+            Aqui você edita o texto introdutório, a citação bíblica e os marcos da linha do tempo. Cada marco aparece como um card com ano, título, descrição e imagem na página pública.
+          </HelpHint>
         </h2>
         <p className="text-sm text-muted-foreground">
           Edita os textos da introdução, da citação bíblica e a linha do tempo da igreja.
@@ -1822,6 +1842,7 @@ function PlanoLeituraEditor({
         title: `Dia ${p.dia} — ${p.tema}`,
         subtitle: `${p.livro} ${p.capitulos}`,
       })}
+      help={{ label: 'Sobre o plano de leitura', body: 'O plano de leitura aparece na página /plano-leitura. Os visitantes podem marcar os dias como concluídos e acompanhar o progresso. Use o campo "Ordem" para definir a sequência dos dias.' }}
     />
   )
 }
