@@ -45,14 +45,61 @@ export default function ContatoPage() {
   const mapsSearchUrl = getMapsSearchUrl()
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
   const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const hasWhatsapp = Boolean(contato.whatsapp)
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
+    if (!form.nome || !form.email || !form.assunto || !form.mensagem) {
+      toast.error('Preencha todos os campos obrigatórios.')
+      return
+    }
     setSending(true)
-    await new Promise((r) => setTimeout(r, 900))
-    setSending(false)
-    toast.success('Mensagem enviada! Retornaremos em breve.')
-    setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
+    try {
+      const res = await fetch('/api/contato', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erro ao enviar mensagem.')
+        return
+      }
+      setSent(true)
+      toast.success('Mensagem enviada com sucesso! Entraremos em contato.')
+      setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
+    } catch {
+      toast.error('Erro de conexão. Tente novamente.')
+    } finally {
+      setSending(false)
+    }
+  }
+
+  const sendViaWhatsapp = () => {
+    const assuntoLabels: Record<string, string> = {
+      visita: 'Quero fazer uma visita',
+      'pedido-oracao': 'Pedido de oração',
+      aconselhamento: 'Aconselhamento pastoral',
+      batismo: 'Quero ser batizado',
+      ministerio: 'Quero servir em um ministério',
+      duvidas: 'Dúvidas gerais',
+      outros: 'Outros',
+    }
+    const lines = [
+      `*Mensagem do site ${church.nomeCurto}*`,
+      ``,
+      `*Nome:* ${form.nome}`,
+      form.email ? `*E-mail:* ${form.email}` : '',
+      form.telefone ? `*Telefone:* ${form.telefone}` : '',
+      `*Assunto:* ${assuntoLabels[form.assunto] || form.assunto}`,
+      ``,
+      form.mensagem,
+    ].filter(Boolean).join('\n')
+
+    const url = whatsappHref(contato.whatsapp, lines)
+    if (url) window.open(url, '_blank')
   }
 
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -336,23 +383,49 @@ export default function ContatoPage() {
                   placeholder="Escreva sua mensagem aqui..."
                 />
               </div>
-              <button
-                type="submit"
-                disabled={sending}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-semibold hover:bg-primary/90 transition disabled:opacity-60 shadow-md hover:shadow-lg hover:shadow-primary/30"
-              >
-                {sending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Enviar mensagem
-                  </>
-                )}
-              </button>
+              {sent ? (
+                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center space-y-2">
+                  <p className="text-green-800 dark:text-green-200 font-medium">Mensagem recebida!</p>
+                  <p className="text-sm text-green-700 dark:text-green-300">Entraremos em contato em breve.</p>
+                  <button
+                    type="button"
+                    onClick={() => setSent(false)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Enviar outra mensagem
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-semibold hover:bg-primary/90 transition disabled:opacity-60 shadow-md hover:shadow-lg hover:shadow-primary/30"
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Enviando...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Enviar mensagem
+                      </>
+                    )}
+                  </button>
+                  {hasWhatsapp && form.nome && form.assunto && form.mensagem && (
+                    <button
+                      type="button"
+                      onClick={sendViaWhatsapp}
+                      className="flex-1 inline-flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-green-700 transition shadow-md"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Enviar via WhatsApp
+                    </button>
+                  )}
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 Ao enviar, você concorda que suas informações sejam usadas apenas para contato da igreja.
               </p>

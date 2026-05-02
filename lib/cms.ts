@@ -92,6 +92,17 @@ export interface CmsPlanoLeituraDay {
   sortOrder: number
 }
 
+export interface CmsContatoMensagem {
+  id: string
+  nome: string
+  email: string
+  telefone: string | null
+  assunto: string
+  mensagem: string
+  lido: boolean
+  createdAt: string
+}
+
 export const DEFAULT_TEXTOS: CmsTextos = {
   homeTitulo: 'Bem-vindo à Nossa Igreja',
   homeSubtitulo:
@@ -822,6 +833,54 @@ export async function upsertPlanoLeitura(p: CmsPlanoLeituraDay): Promise<CmsPlan
 export async function deletePlanoLeitura(id: string): Promise<void> {
   const sb = writerClient()
   const { error } = await sb.from('cms_plano_leitura').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Mensagens de contato (Phase 11.1) ----------
+
+export async function getMensagens(): Promise<CmsContatoMensagem[]> {
+  return safeRead(async (sb) => {
+    const { data, error } = await sb
+      .from('cms_contato_mensagens')
+      .select('id,nome,email,telefone,assunto,mensagem,lido,created_at')
+      .order('created_at', { ascending: false })
+    if (error || !data) return []
+    return data.map((r: { id: string; nome: string; email: string; telefone: string | null; assunto: string; mensagem: string; lido: boolean; created_at: string }) => ({
+      id: r.id,
+      nome: r.nome,
+      email: r.email,
+      telefone: r.telefone,
+      assunto: r.assunto,
+      mensagem: r.mensagem,
+      lido: r.lido,
+      createdAt: r.created_at,
+    }))
+  }, [])
+}
+
+export async function getMensagensNaoLidas(): Promise<number> {
+  return safeRead(async (sb) => {
+    const { count, error } = await sb
+      .from('cms_contato_mensagens')
+      .select('id', { count: 'exact', head: true })
+      .eq('lido', false)
+    if (error) return 0
+    return count ?? 0
+  }, 0)
+}
+
+export async function marcarMensagemLida(id: string, lido: boolean): Promise<void> {
+  const sb = writerClient()
+  const { error } = await sb
+    .from('cms_contato_mensagens')
+    .update({ lido })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteMensagem(id: string): Promise<void> {
+  const sb = writerClient()
+  const { error } = await sb.from('cms_contato_mensagens').delete().eq('id', id)
   if (error) throw error
 }
 

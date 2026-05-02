@@ -43,6 +43,8 @@ import {
   History,
   Shield,
   BookOpen,
+  MessageSquare,
+  Send,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { type ChurchAviso, type AvisoSeveridade } from '@/lib/site-data'
@@ -69,6 +71,10 @@ import {
   createPlanoLeitura,
   upsertPlanoLeitura,
   deletePlanoLeitura,
+  getMensagens,
+  getMensagensNaoLidas,
+  marcarMensagemLida,
+  deleteMensagem,
   saveTextos,
   saveAviso,
   uploadImage,
@@ -79,6 +85,7 @@ import {
   type CmsTextos,
   type CmsHistoriaEntry,
   type CmsPlanoLeituraDay,
+  type CmsContatoMensagem,
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
 import { HelpHint } from '@/components/help-hint'
@@ -97,6 +104,7 @@ type Tab =
   | 'eventos'
   | 'textos'
   | 'plano'
+  | 'mensagens'
   | 'usuarios'
 
 export default function AdminPage() {
@@ -110,6 +118,8 @@ export default function AdminPage() {
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [historia, setHistoria] = useState<CmsHistoriaEntry[]>([])
   const [plano, setPlano] = useState<CmsPlanoLeituraDay[]>([])
+  const [mensagens, setMensagens] = useState<CmsContatoMensagem[]>([])
+  const [naoLidas, setNaoLidas] = useState(0)
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
   const [aviso, setAviso] = useState<ChurchAviso>({
     ativo: false,
@@ -121,7 +131,7 @@ export default function AdminPage() {
   const [hydrated, setHydrated] = useState(false)
 
   const reloadAll = useCallback(async () => {
-    const [b, m, e, t, a, h, pl] = await Promise.all([
+    const [b, m, e, t, a, h, pl, msgs, unread] = await Promise.all([
       getBanners(),
       getMinisterios(),
       getEventos(),
@@ -129,6 +139,8 @@ export default function AdminPage() {
       getAviso(),
       getHistoria(),
       getPlanoLeitura(),
+      getMensagens(),
+      getMensagensNaoLidas(),
     ])
     setBanners(b)
     setMinisterios(m)
@@ -137,6 +149,8 @@ export default function AdminPage() {
     setAviso(a)
     setHistoria(h)
     setPlano(pl)
+    setMensagens(msgs)
+    setNaoLidas(unread)
     setHydrated(true)
   }, [])
 
@@ -172,6 +186,7 @@ export default function AdminPage() {
     { id: 'eventos', label: 'Eventos e Datas', icon: Calendar },
     { id: 'textos', label: 'Textos do Site', icon: FileText },
     { id: 'plano', label: 'Plano de Leitura', icon: BookOpen },
+    { id: 'mensagens', label: `Mensagens${naoLidas > 0 ? ` (${naoLidas})` : ''}`, icon: MessageSquare },
     // Aba exclusiva do admin — conteudista não vê
     ...(profile?.role === 'admin'
       ? [{ id: 'usuarios' as Tab, label: 'Usuários', icon: Shield }]
@@ -433,6 +448,30 @@ export default function AdminPage() {
               await deletePlanoLeitura(id)
               setPlano((prev) => prev.filter((x) => x.id !== id))
               toast.success('Dia removido.')
+            }}
+          />
+        )}
+
+        {tab === 'mensagens' && (
+          <MensagensEditor
+            mensagens={mensagens}
+            onMarcarLida={async (id, lido) => {
+              await marcarMensagemLida(id, lido)
+              setMensagens((prev) => prev.map((m) => m.id === id ? { ...m, lido } : m))
+              setNaoLidas((n) => lido ? Math.max(0, n - 1) : n + 1)
+              toast.success(lido ? 'Marcada como lida.' : 'Marcada como não lida.')
+            }}
+            onDelete={async (id) => {
+              const msg = mensagens.find((m) => m.id === id)
+              await deleteMensagem(id)
+              setMensagens((prev) => prev.filter((m) => m.id !== id))
+              if (msg && !msg.lido) setNaoLidas((n) => Math.max(0, n - 1))
+              toast.success('Mensagem removida.')
+            }}
+            onRefresh={async () => {
+              const [msgs, unread] = await Promise.all([getMensagens(), getMensagensNaoLidas()])
+              setMensagens(msgs)
+              setNaoLidas(unread)
             }}
           />
         )}
@@ -1853,6 +1892,192 @@ function PlanoLeituraEditor({
       })}
       help={{ label: 'Sobre o plano de leitura', body: 'O plano de leitura aparece na página /plano-leitura. Os visitantes podem marcar os dias como concluídos e acompanhar o progresso. Use o campo "Ordem" para definir a sequência dos dias.' }}
     />
+  )
+}
+
+// ======================== MensagensEditor ========================
+
+function MensagensEditor({
+  mensagens,
+  onMarcarLida,
+  onDelete,
+  onRefresh,
+}: {
+  mensagens: CmsContatoMensagem[]
+  onMarcarLida: (id: string, lido: boolean) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+  onRefresh: () => Promise<void>
+}) {
+  const [filtro, setFiltro] = useState<'todas' | 'nao-lidas' | 'lidas'>('todas')
+  const [expandida, setExpandida] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const filtradas = mensagens.filter((m) => {
+    if (filtro === 'nao-lidas') return !m.lido
+    if (filtro === 'lidas') return m.lido
+    return true
+  })
+
+  const naoLidas = mensagens.filter((m) => !m.lido).length
+
+  const assuntoLabels: Record<string, string> = {
+    visita: 'Quero fazer uma visita',
+    'pedido-oracao': 'Pedido de oração',
+    aconselhamento: 'Aconselhamento pastoral',
+    batismo: 'Quero ser batizado',
+    ministerio: 'Quero servir em um ministério',
+    duvidas: 'Dúvidas gerais',
+    outros: 'Outros',
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-primary" />
+            Mensagens de Contato
+            {naoLidas > 0 && (
+              <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                {naoLidas}
+              </span>
+            )}
+            <HelpHint label="Sobre as mensagens">
+              Mensagens enviadas pelos visitantes pelo formulário de contato do site. Marque como lida após responder.
+            </HelpHint>
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            {mensagens.length} mensagen{mensagens.length !== 1 ? 's' : ''} recebida{mensagens.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value as typeof filtro)}
+            className="px-3 py-1.5 text-sm rounded-md border border-input bg-background"
+          >
+            <option value="todas">Todas</option>
+            <option value="nao-lidas">Não lidas ({naoLidas})</option>
+            <option value="lidas">Lidas</option>
+          </select>
+          <button
+            onClick={async () => { setRefreshing(true); await onRefresh(); setRefreshing(false) }}
+            disabled={refreshing}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition"
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} />
+            Atualizar
+          </button>
+        </div>
+      </div>
+
+      {filtradas.length === 0 ? (
+        <div className="bg-card rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
+          {filtro === 'nao-lidas' ? 'Nenhuma mensagem não lida.' : 'Nenhuma mensagem recebida ainda.'}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtradas.map((m) => (
+            <div
+              key={m.id}
+              className={cn(
+                'bg-card rounded-lg border p-4 transition',
+                !m.lido ? 'border-primary/30 bg-primary/[0.02]' : 'border-border'
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <button
+                  onClick={() => setExpandida(expandida === m.id ? null : m.id)}
+                  className="flex-1 text-left min-w-0"
+                >
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {!m.lido && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                    <span className="text-sm font-semibold text-foreground truncate">{m.nome}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(m.createdAt).toLocaleDateString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-primary font-medium mt-0.5">
+                    {assuntoLabels[m.assunto] || m.assunto}
+                  </p>
+                  {expandida !== m.id && (
+                    <p className="text-xs text-muted-foreground mt-1 truncate">{m.mensagem}</p>
+                  )}
+                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={async () => { setBusy(true); await onMarcarLida(m.id, !m.lido); setBusy(false) }}
+                    disabled={busy}
+                    className={cn(
+                      'p-1.5 rounded text-xs transition',
+                      m.lido
+                        ? 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        : 'text-primary hover:bg-primary/10'
+                    )}
+                    title={m.lido ? 'Marcar como não lida' : 'Marcar como lida'}
+                  >
+                    {m.lido ? <Eye className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {expandida === m.id && (
+                <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  <div className="grid sm:grid-cols-2 gap-2 text-xs">
+                    <div><strong className="text-foreground">E-mail:</strong> <a href={`mailto:${m.email}`} className="text-primary hover:underline">{m.email}</a></div>
+                    {m.telefone && <div><strong className="text-foreground">Telefone:</strong> {m.telefone}</div>}
+                  </div>
+                  <div className="bg-muted/50 rounded p-3 text-sm text-foreground whitespace-pre-wrap">
+                    {m.mensagem}
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex gap-2">
+                      <a
+                        href={`mailto:${m.email}?subject=Re: ${assuntoLabels[m.assunto] || m.assunto} — ${m.nome}`}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition"
+                      >
+                        <Send className="h-3 w-3" />
+                        Responder por e-mail
+                      </a>
+                    </div>
+                    {deleteConfirm === m.id ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-destructive">Excluir?</span>
+                        <button
+                          onClick={async () => { setBusy(true); await onDelete(m.id); setDeleteConfirm(null); setBusy(false) }}
+                          disabled={busy}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          <Check className="h-3 w-3" /> Sim
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirm(null)}
+                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs bg-muted hover:bg-muted/80"
+                        >
+                          <X className="h-3 w-3" /> Não
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirm(m.id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-3 w-3" /> Excluir
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
 
