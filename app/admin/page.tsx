@@ -809,6 +809,7 @@ function BannersEditor({
       onUpdate={onUpdate}
       onDelete={onDelete}
       fields={[
+        { key: 'preHeadline', label: 'Pré-headline (opcional, máx 50 chars)', type: 'text' },
         { key: 'title', label: 'Título', type: 'text' },
         { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
         { key: 'imageUrl', label: 'Imagem do banner', type: 'image', hint: IMAGE_HINTS.banner },
@@ -816,6 +817,7 @@ function BannersEditor({
         { key: 'link', label: 'Link', type: 'text' },
       ]}
       makeNew={() => ({
+        preHeadline: null,
         title: 'Novo banner',
         subtitle: '',
         imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&q=80',

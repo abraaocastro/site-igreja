@@ -42,6 +42,7 @@ export interface CmsBanner {
   imageUrl: string
   buttonText: string | null
   link: string | null
+  preHeadline: string | null
   sortOrder: number
 }
 
@@ -118,6 +119,7 @@ interface BannerRow {
   image_url: string
   button_text: string | null
   link: string | null
+  pre_headline: string | null
   sort_order: number
 }
 const bannerFromRow = (r: BannerRow): CmsBanner => ({
@@ -127,6 +129,7 @@ const bannerFromRow = (r: BannerRow): CmsBanner => ({
   imageUrl: r.image_url,
   buttonText: r.button_text,
   link: r.link,
+  preHeadline: r.pre_headline,
   sortOrder: r.sort_order,
 })
 const bannerToRow = (b: Partial<CmsBanner>): Partial<BannerRow> => ({
@@ -135,6 +138,7 @@ const bannerToRow = (b: Partial<CmsBanner>): Partial<BannerRow> => ({
   ...(b.imageUrl !== undefined && { image_url: b.imageUrl }),
   ...(b.buttonText !== undefined && { button_text: b.buttonText }),
   ...(b.link !== undefined && { link: b.link }),
+  ...(b.preHeadline !== undefined && { pre_headline: b.preHeadline }),
   ...(b.sortOrder !== undefined && { sort_order: b.sortOrder }),
 })
 
@@ -267,6 +271,7 @@ const DEFAULT_BANNERS: CmsBanner[] = defaultBanners.map((b, i) => ({
   imageUrl: b.imageUrl,
   buttonText: b.buttonText ?? null,
   link: b.link ?? null,
+  preHeadline: null,
   sortOrder: i,
 }))
 
@@ -334,7 +339,7 @@ export async function getBanners(): Promise<CmsBanner[]> {
   return safeRead(async (sb) => {
     const { data, error } = await sb
       .from('cms_banners')
-      .select('id,title,subtitle,image_url,button_text,link,sort_order')
+      .select('id,title,subtitle,image_url,button_text,link,pre_headline,sort_order')
       .order('sort_order', { ascending: true })
     if (error || !data || data.length === 0) return DEFAULT_BANNERS
     return data.map(bannerFromRow)
@@ -575,7 +580,7 @@ export async function upsertBanner(banner: CmsBanner): Promise<CmsBanner> {
     const { data, error } = await sb
       .from('cms_banners')
       .insert(payload)
-      .select('id,title,subtitle,image_url,button_text,link,sort_order')
+      .select('id,title,subtitle,image_url,button_text,link,pre_headline,sort_order')
       .single()
     if (error) throw error
     return bannerFromRow(data as BannerRow)
@@ -584,7 +589,7 @@ export async function upsertBanner(banner: CmsBanner): Promise<CmsBanner> {
       .from('cms_banners')
       .update(payload)
       .eq('id', banner.id)
-      .select('id,title,subtitle,image_url,button_text,link,sort_order')
+      .select('id,title,subtitle,image_url,button_text,link,pre_headline,sort_order')
       .single()
     if (error) throw error
     return bannerFromRow(data as BannerRow)
@@ -596,7 +601,7 @@ export async function createBanner(banner: Omit<CmsBanner, 'id'>): Promise<CmsBa
   const { data, error } = await sb
     .from('cms_banners')
     .insert(bannerToRow(banner))
-    .select('id,title,subtitle,image_url,button_text,link,sort_order')
+    .select('id,title,subtitle,image_url,button_text,link,pre_headline,sort_order')
     .single()
   if (error) throw error
   return bannerFromRow(data as BannerRow)

@@ -13,6 +13,7 @@ interface Banner {
   imageUrl: string
   link?: string | null
   buttonText?: string | null
+  preHeadline?: string | null
 }
 
 interface BannerCarouselProps {
@@ -60,9 +61,11 @@ export function BannerCarousel({ banners, variant = 'hero', autoplayDelay = 5000
                 <div className="relative h-full mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid md:grid-cols-[1.1fr_1fr] gap-8 items-center">
                   {/* Text */}
                   <div className="relative z-10 py-10">
-                    <div className="eyebrow mb-4">
-                      {String(idx + 1).padStart(2, '0')} · {banner.id.toUpperCase()}
-                    </div>
+                    {banner.preHeadline && (
+                      <div className="eyebrow mb-4">
+                        {banner.preHeadline}
+                      </div>
+                    )}
                     <h1 className="display text-5xl md:text-6xl lg:text-7xl text-foreground text-balance mb-6">
                       {banner.title}
                     </h1>
