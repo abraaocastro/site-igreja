@@ -94,24 +94,25 @@ export function Header() {
   return (
     <>
       {/* ── HEADER BAR ── */}
-      <header className="nav sticky top-0 z-50 border-b border-border" style={{
-        background: 'rgba(251,250,247,.85)',
-        backdropFilter: 'saturate(160%) blur(14px)',
-        WebkitBackdropFilter: 'saturate(160%) blur(14px)',
-      }}>
+      <header className="nav sticky top-0 z-50 border-b border-border bg-background/85 backdrop-blur-xl dark:bg-background/80">
         <div className="mx-auto max-w-[1320px] px-6 md:px-10">
           <div className="flex h-[64px] lg:h-[76px] items-center justify-between gap-6">
             {/* Brand */}
-            <Link href="/" className="flex items-center gap-3.5 shrink-0">
-              <span className="relative w-[42px] h-[42px] rounded-xl bg-foreground text-background grid place-items-center font-serif font-medium text-[22px] overflow-hidden">
-                C
-                <span className="absolute inset-[-2px] rounded-[14px] opacity-60 -z-10" style={{
-                  background: 'conic-gradient(from 220deg, transparent 60%, var(--accent) 78%, transparent 90%)',
-                }} />
-              </span>
-              <span className="flex flex-col leading-tight">
-                <span className="font-serif text-[19px] font-medium tracking-tight">{marca.tituloPrincipal.split(' ')[0] || 'Canaã'}</span>
-                <span className="font-mono text-[9px] uppercase tracking-[.16em] text-muted-foreground mt-0.5">{marca.subtitulo}</span>
+            <Link href="/" className="flex items-center gap-3 shrink-0">
+              <div className="relative h-10 w-10 md:h-11 md:w-11 shrink-0">
+                <Image
+                  src={marca.logo}
+                  alt={marca.tituloPrincipal}
+                  fill
+                  sizes="44px"
+                  className="object-contain"
+                  priority
+                  unoptimized={marca.logo.startsWith('http')}
+                />
+              </div>
+              <span className="hidden md:flex flex-col leading-tight">
+                <span className="text-[14px] font-semibold text-foreground truncate">{marca.tituloPrincipal}</span>
+                <span className="hidden xl:block text-[10px] text-muted-foreground tracking-wider uppercase truncate">{marca.subtitulo}</span>
               </span>
             </Link>
 
@@ -220,11 +221,20 @@ export function Header() {
       )} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         {/* Top bar */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-          <Link href="/" className="flex items-center gap-3.5" onClick={() => setMobileOpen(false)}>
-            <span className="w-[38px] h-[38px] rounded-[10px] bg-foreground text-background grid place-items-center font-serif font-medium text-[19px]">C</span>
+          <Link href="/" className="flex items-center gap-3" onClick={() => setMobileOpen(false)}>
+            <div className="relative h-10 w-10 shrink-0">
+              <Image
+                src={marca.logo}
+                alt={marca.tituloPrincipal}
+                fill
+                sizes="40px"
+                className="object-contain"
+                unoptimized={marca.logo.startsWith('http')}
+              />
+            </div>
             <span className="flex flex-col leading-tight">
-              <span className="font-serif text-[17px] font-medium">{marca.tituloPrincipal.split(' ')[0] || 'Canaã'}</span>
-              <span className="font-mono text-[8px] uppercase tracking-[.16em] text-muted-foreground">{marca.subtitulo}</span>
+              <span className="text-[14px] font-semibold">{marca.tituloPrincipal}</span>
+              <span className="text-[10px] text-muted-foreground tracking-wider uppercase">{marca.subtitulo}</span>
             </span>
           </Link>
           <button onClick={() => setMobileOpen(false)}

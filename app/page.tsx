@@ -101,7 +101,7 @@ export default function Home() {
               </div>
 
               {/* Title */}
-              <h1 className="display display-tight" style={{ fontSize: 'clamp(48px, 9vw, 132px)' }}>
+              <h1 className="display display-tight" style={{ fontSize: 'clamp(40px, 8vw, 132px)' }}>
                 Um lugar<br />
                 <span className="relative inline-block">
                   para voltar
@@ -130,7 +130,7 @@ export default function Home() {
               <div className="flex-1 min-h-8" />
 
               {/* Signals */}
-              <div className="mt-14 border-t border-border pt-6 grid grid-cols-3 gap-0">
+              <div className="mt-10 lg:mt-14 border-t border-border pt-6 grid grid-cols-3 gap-0">
                 {[
                   { num: '48', sup: 'anos', label: 'de história em Capim Grosso, BA' },
                   { num: String(ministerios.length || 6), sup: 'min.', label: 'ministérios atuando toda semana' },
@@ -147,7 +147,7 @@ export default function Home() {
             </div>
 
             {/* RIGHT — countdown feature card */}
-            <div className="relative rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white" style={{ minHeight: 560 }}>
+            <div className="relative rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[420px] lg:min-h-[560px]">
               {/* Glow effects */}
               <div className="absolute inset-0 z-0 pointer-events-none" style={{
                 background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.35), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.25), transparent 50%)',
@@ -502,7 +502,7 @@ export default function Home() {
       </section>
 
       {/* ════════ VERSÍCULO ════════ */}
-      <section className="py-32 lg:py-40 text-center relative overflow-hidden" style={{ background: '#07091A', color: '#fff' }}>
+      <section className="py-32 lg:py-40 text-center relative overflow-hidden bg-brand-navy text-white">
         <div className="absolute inset-0 pointer-events-none" style={{
           background: 'radial-gradient(ellipse 50% 40% at 25% 35%, rgba(0,194,255,.18), transparent 60%), radial-gradient(ellipse 50% 40% at 75% 65%, rgba(111,163,255,.14), transparent 60%)',
         }} />
