@@ -1,49 +1,22 @@
-import { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, Heart, BookOpen, Users, Globe, Church, Cross } from 'lucide-react'
-import { SectionTitle } from '@/components/section-title'
-import { BannerCarousel } from '@/components/banner-carousel'
+import { ArrowUpRight, BookOpen, Heart, Users, Globe, Church, Cross } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: 'Quem Somos | Primeira Igreja Batista de Capim Grosso',
+export const metadata = {
+  title: 'Quem Somos',
   description: 'Conheça a Primeira Igreja Batista de Capim Grosso, nossa missão, valores e o que acreditamos.',
 }
 
 const valores = [
-  {
-    icon: BookOpen,
-    title: 'Fidelidade à Palavra',
-    description: 'Cremos na Bíblia como única regra de fé e prática, inspirada por Deus e inerrante em seu conteúdo original.',
-  },
-  {
-    icon: Heart,
-    title: 'Amor ao Próximo',
-    description: 'Seguimos o exemplo de Cristo, amando e servindo as pessoas sem distinção, compartilhando o amor de Deus.',
-  },
-  {
-    icon: Users,
-    title: 'Comunhão Fraterna',
-    description: 'Valorizamos os relacionamentos autênticos, crescendo juntos como família de Deus em amor e unidade.',
-  },
-  {
-    icon: Globe,
-    title: 'Compromisso Missionário',
-    description: 'Levamos o Evangelho além fronteiras, alcançando vidas para Cristo em nossa cidade e no mundo.',
-  },
-  {
-    icon: Cross,
-    title: 'Adoração Genuína',
-    description: 'Adoramos a Deus em espírito e em verdade, reconhecendo Sua soberania sobre todas as coisas.',
-  },
-  {
-    icon: Church,
-    title: 'Igreja Local',
-    description: 'Cremos na igreja local como o corpo de Cristo, onde cada membro tem dons para edificação mútua.',
-  },
+  { icon: BookOpen, title: 'Fidelidade à Palavra', description: 'Cremos na Bíblia como única regra de fé e prática, inspirada por Deus e inerrante em seu conteúdo original.' },
+  { icon: Heart, title: 'Amor ao Próximo', description: 'Seguimos o exemplo de Cristo, amando e servindo as pessoas sem distinção, compartilhando o amor de Deus.' },
+  { icon: Users, title: 'Comunhão Fraterna', description: 'Valorizamos relacionamentos autênticos, crescendo juntos como família de Deus em amor e unidade.' },
+  { icon: Globe, title: 'Compromisso Missionário', description: 'Levamos o Evangelho além das fronteiras, alcançando vidas para Cristo em nossa cidade e no mundo.' },
+  { icon: Cross, title: 'Adoração Genuína', description: 'Adoramos a Deus em espírito e em verdade, reconhecendo Sua soberania sobre todas as coisas.' },
+  { icon: Church, title: 'Igreja Local', description: 'Cremos na igreja local como o corpo de Cristo, onde cada membro tem dons para edificação mútua.' },
 ]
 
 const cremos = [
-  'Na Trindade: um só Deus em três pessoas - Pai, Filho e Espírito Santo.',
+  'Na Trindade: um só Deus em três pessoas — Pai, Filho e Espírito Santo.',
   'Na divindade de Jesus Cristo, seu nascimento virginal, vida sem pecado, morte expiatória, ressurreição corporal e segunda vinda.',
   'Na salvação pela graça mediante a fé em Jesus Cristo, não por obras.',
   'No batismo por imersão como testemunho público da fé em Cristo.',
@@ -56,177 +29,102 @@ export default function QuemSomosPage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative h-[400px] flex items-center justify-center">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1920&q=80)' }}
-        >
-          <div className="absolute inset-0 bg-primary/85" />
-        </div>
-        <div className="relative z-10 text-center px-4">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-primary-foreground mb-4">
-            Quem Somos
-          </h1>
-          <p className="text-xl text-primary-foreground/90 max-w-2xl mx-auto">
-            Uma comunidade de fé comprometida em amar a Deus e ao próximo
-          </p>
-        </div>
-      </section>
-
-      {/* Introdução */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <SectionTitle 
-                title="Nossa Igreja" 
-                subtitle="Mais de 50 anos servindo a Deus em Capim Grosso"
-                centered={false}
-              />
-              <div className="space-y-4 text-muted-foreground">
-                <p>
-                  A Primeira Igreja Batista de Capim Grosso é uma comunidade cristã evangélica, 
-                  fundamentada na Palavra de Deus e comprometida com a proclamação do Evangelho 
-                  de Jesus Cristo.
-                </p>
-                <p>
-                  Somos parte da Convenção Batista Brasileira e cremos nos princípios históricos 
-                  dos batistas: a autoridade das Escrituras, o sacerdócio universal dos crentes, 
-                  a autonomia da igreja local, a liberdade religiosa e a separação entre igreja e estado.
-                </p>
-                <p>
-                  Nossa igreja é um lugar de acolhimento, onde pessoas de todas as idades e 
-                  backgrounds encontram amor, aceitação e oportunidade de crescimento espiritual.
-                </p>
-              </div>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  href="/historia"
-                  className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Nossa História
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/pastor"
-                  className="inline-flex items-center gap-2 border border-primary text-primary px-6 py-3 rounded-md font-medium hover:bg-primary/5 transition-colors"
-                >
-                  Conheça o Pastor
-                </Link>
-              </div>
+      <section className="pt-20 pb-16 md:pt-28 md:pb-24">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="max-w-3xl">
+            <div className="eyebrow mb-5 inline-flex items-center gap-2.5">
+              <span className="w-7 h-px bg-current opacity-50" /> Quem somos
             </div>
-            <div className="relative">
-              <div 
-                className="aspect-[4/3] rounded-lg bg-cover bg-center shadow-lg"
-                style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1507692049790-de58290a4334?w=800&q=80)' }}
-              />
-              <div className="absolute -bottom-6 -left-6 bg-accent text-accent-foreground p-6 rounded-lg shadow-lg">
-                <p className="text-3xl font-bold">50+</p>
-                <p className="text-sm">Anos de história</p>
-              </div>
+            <h1 className="display mb-6" style={{ fontSize: 'clamp(40px, 6vw, 84px)' }}>
+              Uma comunidade<br />de fé, <em className="text-brand-gradient">amor</em><br />e esperança.
+            </h1>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
+              A Primeira Igreja Batista de Capim Grosso é uma comunidade cristã evangélica,
+              fundamentada na Palavra de Deus e comprometida com a proclamação do Evangelho de Jesus Cristo.
+            </p>
+            <div className="flex flex-wrap gap-2.5 mt-8">
+              <Link href="/historia" className="btn btn-primary h-[46px] px-5 rounded-full text-[15px]">Nossa história <ArrowUpRight className="h-4 w-4" /></Link>
+              <Link href="/pastor" className="btn btn-ghost h-[46px] px-5 rounded-full text-[15px]">Conheça o pastor</Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Nossos Valores */}
-      <section className="py-16 md:py-24 bg-muted">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionTitle 
-            title="Nossos Valores" 
-            subtitle="Os princípios que norteiam nossa caminhada de fé"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {valores.map((valor) => (
-              <div
-                key={valor.title}
-                className="bg-card rounded-lg p-6 shadow-sm border border-border hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                  <valor.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-foreground text-lg mb-2">{valor.title}</h3>
-                <p className="text-sm text-muted-foreground">{valor.description}</p>
+      {/* Valores */}
+      <section className="py-20 md:py-28 bg-surface-2 border-y border-border">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="eyebrow mb-3.5">— Nossos valores</div>
+          <h2 className="display mb-12" style={{ fontSize: 'clamp(36px, 5vw, 64px)' }}>O que nos move.</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-[18px]">
+            {valores.map((v, i) => (
+              <div key={v.title} className="card-soft rounded-[22px] p-7 hover:!transform-none">
+                <div className="font-mono text-[11px] text-muted-foreground tracking-[.14em] mb-4">/{String(i + 1).padStart(2, '0')}</div>
+                <v.icon className="h-6 w-6 text-primary mb-4" />
+                <h3 className="font-serif text-xl tracking-tight mb-2">{v.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{v.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* O Que Cremos */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12">
+      {/* O que cremos */}
+      <section className="py-20 md:py-28">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="grid lg:grid-cols-[5fr_7fr] gap-12 lg:gap-20">
             <div>
-              <SectionTitle 
-                title="O Que Cremos" 
-                subtitle="Nossa declaração de fé"
-                centered={false}
-              />
-              <ul className="space-y-4">
-                {cremos.map((item, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-sm flex items-center justify-center mt-0.5">
-                      {index + 1}
-                    </span>
-                    <p className="text-muted-foreground">{item}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div 
-              className="aspect-square lg:aspect-auto rounded-lg bg-cover bg-center"
-              style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1504052434569-70ad5836ab65?w=800&q=80)' }}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Missão, Visão, Propósito */}
-      <section className="py-16 md:py-24 bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <h3 className="text-2xl font-serif font-bold mb-4">Missão</h3>
-              <p className="opacity-90">
-                Proclamar o Evangelho de Jesus Cristo, fazer discípulos e servir à comunidade 
-                com amor e compaixão.
+              <div className="eyebrow mb-3.5">— Declaração de fé</div>
+              <h2 className="display mb-6" style={{ fontSize: 'clamp(36px, 5vw, 64px)' }}>O que cremos.</h2>
+              <p className="text-muted-foreground leading-relaxed">
+                Somos parte da Convenção Batista Brasileira e cremos nos princípios históricos dos batistas:
+                autoridade das Escrituras, sacerdócio universal, autonomia da igreja local e liberdade religiosa.
               </p>
             </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-serif font-bold mb-4">Visão</h3>
-              <p className="opacity-90">
-                Ser uma igreja relevante que transforma vidas e impacta a sociedade através 
-                do poder do Evangelho.
-              </p>
-            </div>
-            <div className="text-center">
-              <h3 className="text-2xl font-serif font-bold mb-4">Propósito</h3>
-              <p className="opacity-90">
-                Glorificar a Deus em tudo o que fazemos, amando-O de todo o coração e amando 
-                o próximo como a nós mesmos.
-              </p>
+            <div className="space-y-4">
+              {cremos.map((item, i) => (
+                <div key={i} className="flex items-start gap-4 p-4 rounded-[16px] border border-border hover:border-foreground transition-colors">
+                  <span className="shrink-0 w-8 h-8 rounded-full bg-foreground text-background text-sm font-mono grid place-items-center">{i + 1}</span>
+                  <p className="text-[15px] text-foreground leading-relaxed pt-1">{item}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Banner */}
-      <section className="py-8 bg-muted">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <BannerCarousel 
-            banners={[
-              {
-                id: '1',
-                title: 'Venha nos Visitar',
-                subtitle: 'Domingos às 9h e 19h - Quartas às 19h30',
-                imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=800&q=80',
-                link: '/contato',
-                buttonText: 'Como Chegar',
-              },
-            ]} 
-            variant="inline" 
-          />
+      {/* Missão / Visão / Propósito */}
+      <section className="py-20 md:py-28 bg-brand-navy text-white relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 50% 40% at 25% 35%, rgba(0,194,255,.15), transparent 60%)',
+        }} />
+        <div className="relative z-10 mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="grid md:grid-cols-3 gap-12 md:gap-8">
+            {[
+              { n: '/01', t: 'Missão', d: 'Proclamar o Evangelho de Jesus Cristo, fazer discípulos comprometidos com a Palavra de Deus e servir à comunidade com amor e compaixão.' },
+              { n: '/02', t: 'Visão', d: 'Ser uma igreja relevante que transforma vidas e impacta a sociedade através do poder do Evangelho, formando discípulos que fazem discípulos.' },
+              { n: '/03', t: 'Propósito', d: 'Glorificar a Deus em tudo o que fazemos, amando-O de todo o coração e amando o próximo como a nós mesmos.' },
+            ].map(item => (
+              <div key={item.n}>
+                <div className="font-mono text-[11px] tracking-[.14em] text-accent mb-4">{item.n}</div>
+                <h3 className="font-serif text-[28px] leading-none tracking-tight mb-4">{item.t}</h3>
+                <p className="text-white/75 leading-relaxed">{item.d}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 md:py-28">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10 text-center">
+          <h2 className="display mb-5" style={{ fontSize: 'clamp(36px, 5vw, 64px)' }}>Venha nos <em className="italic">conhecer.</em></h2>
+          <p className="text-muted-foreground max-w-[46ch] mx-auto mb-8">
+            Convidamos você a fazer parte desta comunidade de fé. Juntos, fazemos a diferença.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2.5">
+            <Link href="/ministerios" className="btn btn-primary h-[46px] px-5 rounded-full text-[15px]">Nossos ministérios <ArrowUpRight className="h-4 w-4" /></Link>
+            <Link href="/eventos" className="btn btn-ghost h-[46px] px-5 rounded-full text-[15px]">Próximos eventos</Link>
+          </div>
         </div>
       </section>
     </div>

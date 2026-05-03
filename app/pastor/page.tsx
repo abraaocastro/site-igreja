@@ -3,234 +3,74 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Mail, Phone, Instagram, BookOpen, Heart, Users, GraduationCap, Quote, Church as ChurchIcon, ArrowRight } from 'lucide-react'
-import { SectionTitle } from '@/components/section-title'
-import { getChurch, formatPhone, telHref, mailtoHref, type Church } from '@/lib/site-data'
+import { Instagram, ArrowUpRight } from 'lucide-react'
+import { getChurch, mailtoHref, type Church } from '@/lib/site-data'
 import { getChurchEffective } from '@/lib/cms'
 
-const ministerio = [
-  { icon: BookOpen, label: 'Pregação Expositiva', description: 'Ensino sistemático da Palavra de Deus' },
-  { icon: Heart, label: 'Aconselhamento', description: 'Cuidado pastoral e orientação espiritual' },
-  { icon: Users, label: 'Discipulado', description: 'Formação de novos líderes e discípulos' },
-  { icon: GraduationCap, label: 'Ensino', description: 'Capacitação bíblica e teológica' },
-]
-
 export default function PastorPage() {
-  // Default = JSON estático (evita flash vazio). useEffect substitui pelo
-  // valor efetivo (overrides do CMS por cima do JSON).
   const [church, setChurch] = useState<Church>(() => getChurch())
-
-  useEffect(() => {
-    let cancelled = false
-    getChurchEffective().then((c) => {
-      if (!cancelled) setChurch(c)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  useEffect(() => { let c = false; getChurchEffective().then(v => { if (!c) setChurch(v) }); return () => { c = true } }, [])
 
   const { pastor, contato } = church
-  const pastorEmailLink = mailtoHref(contato.email)
-  const pastorPhoneLink = telHref(contato.telefone)
-  const pastorPhoneDisplay = formatPhone(contato.telefone)
-  // Handle do Instagram derivado da URL: extrai a última parte do path
-  const instagramHandle = pastor.instagram
-    ? '@' + pastor.instagram.replace(/\/$/, '').split('/').pop()
-    : null
+  const instagramHandle = pastor.instagram ? '@' + pastor.instagram.replace(/\/$/, '').split('/').pop() : null
 
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-brand-gradient text-white">
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-0 right-0 h-96 w-96 bg-accent rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-96 w-96 bg-primary rounded-full blur-3xl" />
-        </div>
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-          <div className="grid lg:grid-cols-2 gap-10 items-center">
+      <section className="pt-20 pb-16 md:pt-28 md:pb-24">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[5fr_7fr] gap-12 lg:gap-[72px] items-center">
+            {/* Portrait */}
+            <div className="relative aspect-[4/5] rounded-[22px] lg:rounded-[28px] overflow-hidden bg-brand-gradient" style={{ boxShadow: '0 36px 80px -36px rgba(11,16,32,.35)' }}>
+              <Image src={pastor.foto} alt={`${pastor.titulo} ${pastor.nome}`} fill sizes="(min-width: 1024px) 40vw, 100vw" className="object-cover object-top" priority unoptimized={pastor.foto.startsWith('http')} />
+              <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/70 via-black/25 to-transparent pointer-events-none" />
+              <span className="absolute top-[18px] left-[18px] inline-flex items-center gap-2 h-[30px] px-3 rounded-full bg-background/95 backdrop-blur border border-border text-[11px] font-medium">
+                <span className="pulse-dot" /> {pastor.titulo}
+              </span>
+              <div className="absolute left-[18px] right-[18px] bottom-[18px] text-white">
+                <div className="font-serif text-[22px] lg:text-[28px] leading-none tracking-tight">Pr. {pastor.nome}</div>
+              </div>
+            </div>
+
+            {/* Copy */}
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-sm mb-4">
-                <ChurchIcon className="h-4 w-4 text-accent" />
-                {pastor.titulo}
-              </div>
-              <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">
-                Pr. {pastor.nome}
+              <div className="eyebrow mb-4">— Liderança</div>
+              <h1 className="display mb-6" style={{ fontSize: 'clamp(40px, 6vw, 84px)' }}>
+                Pr. {pastor.nome.split(' ')[0]}<br /><em className="text-brand-gradient">{pastor.nome.split(' ').slice(1).join(' ')}</em>
               </h1>
-              <div className="text-lg opacity-90 max-w-xl leading-relaxed space-y-2">
-                {pastor.bio.map((paragrafo: string, i: number) => (
-                  <p key={i}>{paragrafo}</p>
-                ))}
+
+              <div className="space-y-4 text-[17px] text-muted-foreground leading-[1.65] max-w-[52ch]">
+                {pastor.bio.map((p: string, i: number) => <p key={i}>{p}</p>)}
               </div>
-              <div className="mt-8 flex flex-wrap gap-3">
-                {pastorEmailLink && (
-                  <a
-                    href={pastorEmailLink}
-                    className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-5 py-2.5 rounded-md font-medium hover:bg-accent/90 transition"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Enviar e-mail
-                  </a>
-                )}
+
+              <blockquote className="mt-10 pl-7 py-1 border-l-2 border-accent bg-accent/[.05] rounded-r-[14px] pr-7 relative max-w-[48ch]">
+                <span className="absolute top-[-8px] left-4 font-serif text-[60px] text-accent/50 leading-none">&ldquo;</span>
+                <p className="font-serif text-[20px] leading-[1.35] tracking-tight italic pt-4 pb-3">
+                  A igreja é o lugar onde a graça de Deus encontra vidas reais — e nenhuma delas chega tarde demais.
+                </p>
+              </blockquote>
+
+              <div className="flex flex-wrap gap-2.5 mt-8">
                 {pastor.instagram && (
-                  <a
-                    href={pastor.instagram}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-md font-medium transition"
-                  >
-                    <Instagram className="h-4 w-4" />
-                    {instagramHandle ?? 'Instagram'}
+                  <a href={pastor.instagram} target="_blank" rel="noreferrer" className="btn btn-primary h-[46px] px-5 rounded-full text-[15px]">
+                    <Instagram className="h-4 w-4" /> {instagramHandle}
                   </a>
                 )}
-                <Link
-                  href="/contato"
-                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-5 py-2.5 rounded-md font-medium transition"
-                >
-                  Agendar conversa
-                  <ArrowRight className="h-4 w-4" />
+                <Link href="/contato" className="btn btn-ghost h-[46px] px-5 rounded-full text-[15px]">
+                  Agendar conversa <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
-            <div className="relative mx-auto lg:ml-auto">
-              <div className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-[22rem] md:h-[22rem]">
-                <div className="absolute inset-0 rounded-full bg-accent/30 blur-2xl" />
-                <div className="relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-2xl glow-cyan">
-                  <Image
-                    src={pastor.foto}
-                    alt={`${pastor.titulo} ${pastor.nome}`}
-                    fill
-                    sizes="(min-width: 768px) 22rem, 80vw"
-                    className="object-cover"
-                    priority
-                    unoptimized={pastor.foto.startsWith('http')}
-                  />
-                </div>
-                <div className="absolute -bottom-3 -right-3 bg-white text-primary px-4 py-2 rounded-full shadow-lg font-semibold text-sm flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-accent animate-pulse-soft" />
-                  {pastor.titulo}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Perfil */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-[360px_1fr] gap-10 items-start">
-            <aside className="lg:sticky lg:top-24 self-start space-y-4">
-              <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-                <div className="relative aspect-square rounded-xl overflow-hidden mb-4">
-                  <Image
-                    src={pastor.foto}
-                    alt={`${pastor.titulo} ${pastor.nome}`}
-                    fill
-                    sizes="360px"
-                    className="object-cover"
-                    unoptimized={pastor.foto.startsWith('http')}
-                  />
-                </div>
-                <h2 className="text-xl font-serif font-bold text-foreground">Pr. {pastor.nome}</h2>
-                <p className="text-sm text-primary font-medium">{pastor.titulo}</p>
-                <p className="text-sm text-muted-foreground mt-1">Pastoreando a PIBAC</p>
-                {(pastorEmailLink || pastorPhoneLink || pastor.instagram) && (
-                  <div className="mt-5 pt-5 border-t border-border space-y-2">
-                    {pastorEmailLink && (
-                      <a
-                        href={pastorEmailLink}
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition break-all"
-                      >
-                        <Mail className="h-4 w-4 shrink-0" />
-                        {contato.email}
-                      </a>
-                    )}
-                    {pastorPhoneLink && (
-                      <a
-                        href={pastorPhoneLink}
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
-                      >
-                        <Phone className="h-4 w-4 shrink-0" />
-                        {pastorPhoneDisplay}
-                      </a>
-                    )}
-                    {pastor.instagram && (
-                      <a
-                        href={pastor.instagram}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition"
-                      >
-                        <Instagram className="h-4 w-4 shrink-0" />
-                        {instagramHandle}
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-brand-gradient text-white rounded-2xl p-6 shadow-lg">
-                <Quote className="h-7 w-7 text-accent mb-2" />
-                <p className="italic font-serif">
-                  &ldquo;Apascenta os meus cordeiros, cuida das minhas ovelhas.&rdquo;
-                </p>
-                <p className="mt-2 text-sm opacity-80">João 21:15-17</p>
-              </div>
-            </aside>
-
-            <div>
-              <SectionTitle title="Sobre o Pastor" centered={false} />
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                {pastor.bio.map((paragrafo: string, i: number) => (
-                  <p key={i}>{paragrafo}</p>
-                ))}
-                <p>
-                  Como {pastor.titulo} da Primeira Igreja Batista de Capim Grosso, lidera
-                  com paixão pelo Evangelho e amor pelas pessoas, dedicando-se ao ensino da
-                  Palavra, ao aconselhamento pastoral e à formação de novos discípulos.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Áreas de Ministério */}
-      <section className="py-16 md:py-24 bg-muted">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <SectionTitle title="Áreas de Ministério" subtitle="Principais frentes de atuação pastoral" />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {ministerio.map((item) => (
-              <div
-                key={item.label}
-                className="bg-card rounded-xl p-6 border border-border text-center shadow-sm hover-lift"
-              >
-                <div className="w-14 h-14 bg-brand-gradient-cyan rounded-full flex items-center justify-center mx-auto mb-4">
-                  <item.icon className="h-7 w-7 text-white" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">{item.label}</h3>
-                <p className="text-sm text-muted-foreground">{item.description}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl font-serif font-bold mb-3">Agende uma conversa</h2>
-          <p className="opacity-90 max-w-xl mx-auto mb-6">
-            O Pastor está disponível para atendimento pastoral, aconselhamento e orientação espiritual.
-          </p>
-          <Link
-            href="/contato"
-            className="inline-flex items-center gap-2 bg-accent text-accent-foreground px-6 py-3 rounded-md font-semibold hover:bg-accent/90 transition"
-          >
-            <Phone className="h-4 w-4" />
-            Entrar em Contato
-          </Link>
+      <section className="py-20 md:py-28 bg-surface-2 border-y border-border text-center">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <h2 className="display mb-5" style={{ fontSize: 'clamp(36px, 5vw, 64px)' }}>Agende uma <em className="italic">conversa.</em></h2>
+          <p className="text-muted-foreground max-w-[46ch] mx-auto mb-8">O Pastor está disponível para atendimento pastoral, aconselhamento e orientação espiritual.</p>
+          <Link href="/contato" className="btn btn-primary h-[46px] px-5 rounded-full text-[15px]">Entrar em contato <ArrowUpRight className="h-4 w-4" /></Link>
         </div>
       </section>
     </div>
