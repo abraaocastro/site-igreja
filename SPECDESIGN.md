@@ -8,8 +8,8 @@
 >
 > Backend expõe APIs estáveis (tabela abaixo). Frontend consome e redesenha à vontade SEM mexer em `lib/`, `supabase/`, `middleware.ts`, `scripts/` ou `__tests__/`.
 
-**Última atualização:** 2026-05-02 (Redesign v3 planejado — plano completo por página)
-**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.1
+**Última atualização:** 2026-05-03 (Redesign v3 completo — todas as entregas v3.1–v3.5)
+**SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.2
 **PROGRESS:** [`PROGRESS.md`](./PROGRESS.md)
 
 > **🎨 Changelog 2026-04-24:** recebido e aplicado redesign do Claude Design para:
@@ -516,11 +516,12 @@ Se algum `data-testid` ou prop do `<PasswordStrength>` mudou, os testes em `__te
 
 | Entrega | Escopo | Status |
 |---|---|---|
-| v3.1 | `globals.css` tokens + utilities | ⏳ Próximo |
-| v3.2 | `header.tsx` + `footer.tsx` | ⏳ |
-| v3.3 | Home (`app/page.tsx`) — hero editorial + countdown card + marquee + seções | ⏳ |
-| v3.4 | Páginas internas: quem-somos, historia, visao, pastor, ministerios, eventos | ⏳ |
-| v3.5 | Páginas secundárias: calendario, plano-leitura, contribua, contato, login | ⏳ |
+| v3.1 | `globals.css` tokens + utilities | ✅ Entregue |
+| v3.2 | `header.tsx` + `footer.tsx` | ✅ Entregue |
+| v3.3 | Home (`app/page.tsx`) — hero editorial + countdown card + marquee + seções | ✅ Entregue (+ 3 fixes: mobile, logo, contraste) |
+| v3.4 | Páginas internas: quem-somos, historia, visao, pastor, ministerios, eventos | ✅ Entregue |
+| v3.5 | Páginas secundárias: plano-leitura, contribua, contato + fix footer dark mode | ✅ Entregue |
+| — | Calendário, login, admin | ⚪ Não incluídos (funcionais com tokens atualizados) |
 
 ---
 

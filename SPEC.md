@@ -1,7 +1,7 @@
 # SPEC — Portal Institucional PIBAC
 
-**Versão:** 3.1 (2026-05-02)
-**Status:** Phases 1–4, 7, 8, 9, 10 ✅ concluídas. **Phase 11** (qualidade, robustez e polimento) **especificada** — 7 frentes: formulário de contato real, otimização de imagens, recuperação de senha, prompt edições não salvas, skeletons, refactor admin, cleanup de eventos.
+**Versão:** 3.2 (2026-05-03)
+**Status:** Phases 1–4, 7–10 ✅ concluídas. **Phase 11** em execução — 11.1 (formulário contato real) e 11.2 (otimização imagens) entregues. Faltam: 11.3 (recuperação senha), 11.4 (prompt edições não salvas), 11.5 (skeletons), 11.6 (refactor admin), 11.7 (cleanup eventos). **Redesign v3 entregue** (globals, header, footer, home, 6 internas, 3 secundárias).
 **Substitui:** v2.3 de 25/04/2026
 
 ---
@@ -729,10 +729,10 @@ c) **Se nenhum está configurado:** formulário mostra mensagem honesta — "Ent
 - Fallback WhatsApp: se WhatsApp configurado, botão "Enviar via WhatsApp" aparece ao lado do "Enviar"
 
 **Tasks:**
-- [ ] 11.1.a — Migration `008_contato_mensagens.sql` + RLS
-- [ ] 11.1.b — API route `app/api/contato/route.ts` (POST salva no banco)
-- [ ] 11.1.c — Refatorar `/contato` com submit real + fallback WhatsApp
-- [ ] 11.1.d — Aba "Mensagens" no admin com listagem + badge de não-lidas
+- [x] 11.1.a — Migration `008_contato_mensagens.sql` + RLS
+- [x] 11.1.b — API route `app/api/contato/route.ts` (POST salva no banco)
+- [x] 11.1.c — Refatorar `/contato` com submit real + fallback WhatsApp
+- [x] 11.1.d — Aba "Mensagens" no admin com listagem + badge de não-lidas
 - [ ] 11.1.e — Testes da API route + componente
 
 #### 11.2. Otimização de imagens
@@ -746,9 +746,9 @@ c) **Se nenhum está configurado:** formulário mostra mensagem honesta — "Ent
 - Imagens no carousel (heroBanners) recebem `priority` no first slide, `loading="lazy"` nos demais
 
 **Tasks:**
-- [ ] 11.2.a — Comprimir `/public/pastor-silas.png` e demais estáticas para WebP
-- [ ] 11.2.b — `lib/image-utils.ts` com `resizeAndCompress(file, maxWidth, quality)` usando Canvas
-- [ ] 11.2.c — `uploadImage()` usa `resizeAndCompress` antes do upload
+- [x] 11.2.a — Comprimir `/public/pastor-silas.png` e demais estáticas para WebP
+- [x] 11.2.b — `lib/image-utils.ts` com `resizeAndCompress(file, maxWidth, quality)` usando Canvas
+- [x] 11.2.c — `uploadImage()` usa `resizeAndCompress` antes do upload
 - [ ] 11.2.d — Auditar `<Image>` em todas as páginas: adicionar `sizes`, `priority` no hero
 
 #### 11.3. Recuperação de senha via UI
@@ -892,12 +892,13 @@ c) **Se nenhum está configurado:** formulário mostra mensagem honesta — "Ent
 - [x] **Phase 7 — SEO local** (concluída — metadata por rota + sitemap + robots + JSON-LD + a11y básica)
 - [x] **Phase 8 — Backend CMS** (concluída — 5 tabelas + Storage + readers/writers + 15 testes; admin escreve direto no banco)
 - [x] **Phase 9 — Cobertura total do admin** (concluída — Igreja/Pastor/História editáveis via `cms_textos` KV + nova tabela `cms_historia`. Container "valor sugerido" removido de /contribua. 10 testes novos, 69 totais.)
-- [x] **Phase 10 — Refinos do admin** (concluída — convite de usuários, calendar preview, plano de leitura editável, multi-líderes, HelpHints, contador inteligente, botão Assistir configurável, marquee dinâmico, pré-headline editável, horário de término nos eventos.)
-- [ ] **Phase 11 — Qualidade, robustez e polimento** (especificada — 7 frentes: formulário de contato real, otimização de imagens, recuperação de senha, prompt edições não salvas, skeletons, refactor admin, cleanup de eventos.)
+- [x] **Phase 10 — Refinos do admin** (concluída — todas as 9 frentes + horário de término nos eventos.)
+- [ ] **Phase 11 — Qualidade, robustez e polimento** (em execução — 11.1 e 11.2 entregues, faltam 11.3–11.7.)
+- [x] **Redesign v3** — globals.css + header + footer + home + 6 internas + 3 secundárias entregues.
 - [ ] ~~Phase 5 — Programação consolidada~~ → **fundida em 8**
 - [ ] ~~Phase 6 — Admin UI editar JSON~~ → **fundida em 8 + 9**
 
-**MVP em produção, Phase 10 concluída, Phase 11 especificada.** O site está funcional e editável, mas a Phase 11 resolve falhas reais de qualidade (formulário fake, imagens pesadas, sem recuperação de senha).
+**MVP em produção, Phase 10 concluída, Redesign v3 entregue, Phase 11 em execução.** O site é funcional, editável e visualmente consistente. Phase 11 resolve pendências de robustez.
 
 ### Pendências de conteúdo (não-código)
 
@@ -915,6 +916,7 @@ o fallback de SSR e build estático.
 
 | Data | Versão | Mudanças |
 |---|---|---|
+| 2026-05-03 | 3.2 | Phase 10 todas as 9 frentes concluídas (10.5 HelpHints, 10.6 contador inteligente, 10.7 botão Assistir configurável, 10.8 marquee dinâmico, 10.9 pré-headline banners + horário de término nos eventos). Phase 11 iniciada: 11.1 formulário de contato real (migration 008 + API route + aba Mensagens no admin + fallback WhatsApp), 11.2 otimização de imagens (lib/image-utils.ts resize+compress + pastor-silas.webp 1.2MB→38KB). Redesign v3 completo: globals.css tokens brand + header glass com logo real + footer navy + home editorial (hero + countdown card + marquee strip + 8 seções) + 6 internas (quem-somos, história, visão, pastor, ministérios, eventos) + 3 secundárias (plano-leitura, contribua, contato) + fix footer dark mode + fix mobile sizing + fix contraste countdown card. |
 | 2026-05-02 | 3.1 | Phase 10 concluída (10.5–10.9 entregues + horário de término nos eventos). Phase 11 especificada: 7 frentes de qualidade e robustez (formulário de contato real com fallback WhatsApp + tabela cms_contato_mensagens, otimização de imagens com resize no upload, recuperação de senha via UI, prompt de edições não salvas, loading skeletons, refactor do admin monolítico em arquivos separados, auto-archive de eventos passados). |
 | 2026-05-01 | 3.0 | Frentes 10.1–10.4 entregues: convite de conteudistas (API route + aba admin + senha gerada), calendar preview no EventosEditor (lib/calendar-utils + filtro por dia), plano de leitura editável (migration 004 + CRUD + aba admin + página pública lê do DB), múltiplos líderes por ministério (migration 005 leaders jsonb + backfill + LeadersDisplay popover + CardsEditor.renderExtra). Fix RLS recursão em profiles_admin_read_all. |
 | 2026-04-28 | 2.9 | Phase 10 ganhou +1 frente (10.9): pré-headline editável em `cms_banners`. UUID estava vazando pro design via `banner.id.toUpperCase()` no eyebrow. Fix: nova coluna `pre_headline text` nullable + campo no admin + render condicional. |

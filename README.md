@@ -69,6 +69,7 @@ app/
   login/                # Login com Supabase Auth
   admin/                # Painel de conteúdo (CMS no Supabase)
   api/admin/users/      # API route para gerenciar conteudistas
+  api/contato/          # API route para formulário de contato
 components/
   layout/{header,footer}.tsx
   banner-carousel.tsx
@@ -83,6 +84,8 @@ lib/
   auth.tsx              # AuthProvider + useAuth (Supabase Auth)
   cms.ts                # Readers/writers do CMS (Supabase)
   calendar-utils.ts     # Funções compartilhadas do calendário
+  next-event.ts         # Próximo evento inteligente (countdown + marquee)
+  image-utils.ts        # Resize e compressão de imagens no client
   data.ts               # Dados defaults (fallback se DB offline)
   password-strength.ts  # evaluatePassword + generatePassphrase
   site-data.ts          # Reader tipado de data/church.json
@@ -112,7 +115,7 @@ O painel permite editar banners, ministérios (com múltiplos líderes), eventos
 4. Rode as migrations (`supabase/migrations/*.sql`) no SQL Editor do Supabase.
 5. Rode `npm run bootstrap:admin` localmente para criar o admin.
 
-## Migrations pendentes
+## Migrations
 
 Rodar no Supabase SQL Editor na ordem:
 1. `001_profiles_and_roles.sql`
@@ -120,6 +123,9 @@ Rodar no Supabase SQL Editor na ordem:
 3. `003_cms_full.sql`
 4. `004_plano_leitura.sql`
 5. `005_multi_leaders.sql`
+6. `006_banner_pre_headline.sql`
+7. `007_evento_end_time.sql`
+8. `008_contato_mensagens.sql`
 
 ## Licença
 

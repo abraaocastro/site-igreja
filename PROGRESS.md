@@ -4,10 +4,10 @@
 > Documento de handoff entre sessões. Evita refazer decisões já tomadas.
 > Fonte canônica do "o que já foi feito vs. o que ainda falta".
 >
-> **Última atualização:** 2026-05-01 (Phase 10 frentes 10.1–10.4 entregues)
-> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.0
+> **Última atualização:** 2026-05-03 (Phase 11 em execução, Redesign v3 entregue)
+> **SPEC correspondente:** [`SPEC.md`](./SPEC.md) v3.2
 > **Design handoff:** [`SPECDESIGN.md`](./SPECDESIGN.md)
-> **Fase em andamento:** **Phase 10 — Refinos do admin** (em execução, **9 frentes**). Frentes 10.1–10.4 entregues. Próximos: 10.5 (HelpHints restantes), 10.6–10.9 (bugs reportados).
+> **Fase em andamento:** **Phase 11 — Qualidade e robustez** (11.1 e 11.2 entregues). Redesign v3 completo (v3.1–v3.5). Próximos: 11.3–11.7.
 >
 > ### ⚠️ Divisão de responsabilidade (desde 2026-04-23)
 > - **Agente de código (backend-only):** auth, dados, RLS, hooks, lib, migrations, scripts, testes.
@@ -17,56 +17,39 @@
 
 ---
 
-## 🎯 Próximos passos (atualizado 2026-05-01)
+## 🎯 Próximos passos (atualizado 2026-05-03)
 
-### 🟡 Phase 10 — Refinos do admin (em execução)
+### ✅ Phase 10 — Refinos do admin (CONCLUÍDA)
 
-5 frentes independentes (detalhes em SPEC.md §Phase 10):
+Todas as 9 frentes entregues + extra (horário de término):
+- ✅ 10.1 Convite de usuários (API route + aba admin + senha gerada)
+- ✅ 10.2 Calendar preview no EventosEditor
+- ✅ 10.3 Plano de leitura editável (migration 004 + CRUD + aba admin)
+- ✅ 10.4 Múltiplos líderes por ministério (migration 005 + LeadersDisplay)
+- ✅ 10.5 HelpHints em todas as abas do admin
+- ✅ 10.6 Contador "Próximo culto" inteligente (lib/next-event.ts)
+- ✅ 10.7 Botão "Assistir" configurável (cms_textos KV)
+- ✅ 10.8 Marquee de eventos da semana (dinâmico, filtra passados)
+- ✅ 10.9 Pré-headline editável dos banners (migration 006)
+- ✅ Extra: horário de término nos eventos (migration 007 + endTime)
 
-#### 10.1. Convite de novos usuários (admin → conteudista) ✅
-- ✅ Aba `Usuários` em `/admin`, **só pra `role='admin'`**
-- ✅ API route `app/api/admin/users/route.ts` (POST/GET/DELETE) usando service-role
-- ✅ Conteudista vê todas as abas EXCETO `Usuários`
-- ✅ Senha gerada exibida 1× na tela; convidado é forçado a trocar via `/admin/primeiro-acesso`
+### ✅ Redesign v3 — Editorial magazine light (CONCLUÍDO)
 
-#### 10.2. Calendar preview no EventosEditor
-- Mini-calendário com dots por categoria, clique filtra eventos do dia
-- Componente novo `components/admin/calendar-preview.tsx`
-- `lib/calendar-utils.ts` extraído (reusa lógica de `app/calendario/page.tsx`)
+- ✅ v3.1 globals.css — tokens brand hex + utilities (schedule-strip, display, eyebrow, btn pill, etc)
+- ✅ v3.2 Header (glass sticky, logo real, mobile drawer full-screen /01) + Footer (navy, CTA Fraunces, wordmark Canaã)
+- ✅ v3.3 Home reescrita (hero editorial + countdown card + marquee strip + 8 seções)
+- ✅ v3.4 Páginas internas: quem-somos, história, visão, pastor, ministérios, eventos
+- ✅ v3.5 Páginas secundárias: plano-leitura, contribua, contato + fix footer dark mode
 
-#### 10.3. Plano de leitura editável
-- Migration: `cms_plano_leitura` (dia/livro/capitulos/tema/sort_order)
-- Seed das 30 entradas de `lib/data.ts#planoLeitura`
-- Aba `Plano de Leitura` no admin via `CardsEditor`
-- `app/plano-leitura/page.tsx` lê do DB com fallback
+### 🟡 Phase 11 — Qualidade e robustez (em execução)
 
-#### 10.4. Múltiplos líderes por ministério
-- Migration: trocar `leader text + leader_instagram text` por `leaders jsonb` `[{name, instagram}]`
-- Backfill (linha existente vira array de 1)
-- `MinisteriosEditor`: lista dinâmica com `+/×`
-- `components/leaders-popover.tsx` no front: 1 líder = inline; 2+ = botão "Liderança (N)" abre popover
-
-#### 10.5. Notas dev → HelpHints (✅ parcialmente feito)
-- ✅ `components/help-hint.tsx` (`?` circular + popover, fecha com Esc/click outside)
-- ✅ Removidas as 2 caixas "Como funciona" do admin (Visão Geral + Igreja)
-- ✅ `CardsEditor` ganhou prop `help` opcional
-- ⏳ Passar `help` pra cada uso de `CardsEditor` + adicionar HelpHints em editores que não usam CardsEditor (Igreja, Pastor, Avisos, Textos)
-
-#### 10.6. Contador "Próximo culto" inteligente (bug reportado 28/04)
-**Problema:** `useNextService()` em `app/page.tsx` é hardcoded pra "próximo domingo 19h" — ignora `cms_eventos` totalmente. Stakeholder cadastrou evento pra hoje em 30 min, contador continuou mostrando ~5 dias.
-**Fix:** novo helper `lib/next-event.ts` que combina horários recorrentes + eventos especiais e retorna o mais próximo. Detalhes na SPEC §10.6.
-
-#### 10.7. Botão "Assistir" configurável (bug reportado 28/04)
-**Problema:** botão hardcoded `<Link href="/eventos">`, não dá pra apontar pra YouTube live ou similar.
-**Fix:** chaves `botaoAssistirUrl`, `botaoAssistirRotulo`, `botaoAssistirAoVivo` em `cms_textos`. Detalhes na SPEC §10.7.
-
-#### 10.8. Marquee de horários da semana atual (bug reportado 28/04)
-**Problema:** marquee usa `horariosCultos` em loop infinito, sem filtrar passados. Mostra "Quarta 19:30" mesmo numa quinta. Usa ícone `<Sparkles>` (✨) que parece IA generated.
-**Fix:** mostrar só eventos da semana corrente ainda pendentes (combinar recorrentes expandidos + cms_eventos), trocar Sparkles por Calendar ou bullet, mostrar estado "Sem mais eventos esta semana" quando vazio. Detalhes na SPEC §10.8.
-
-#### 10.9. Pré-headline editável dos banners (bug visual reportado 28/04)
-**Problema:** eyebrow do banner mostra `03 · AA147C07-8C6B-4EDE-90B2-7320198AD875` em cima do título — UUID gerado pelo Supabase vazando pro design. Concatenação `index + banner.id.toUpperCase()` em `components/banner-carousel.tsx:64`.
-**Fix:** adicionar coluna `pre_headline text` nullable em `cms_banners`. Admin tem novo campo "Pré-headline (opcional)" no BannersEditor. Quando vazio, eyebrow some completamente. Detalhes na SPEC §10.9.
+- ✅ 11.1 Formulário de contato real (migration 008 + API route + aba Mensagens no admin + fallback WhatsApp)
+- ✅ 11.2 Otimização de imagens (lib/image-utils.ts resize+compress + pastor-silas.webp 38KB)
+- ⏳ 11.3 Recuperação de senha via UI
+- ⏳ 11.4 Prompt "edições não salvas" no admin
+- ⏳ 11.5 Loading skeletons nas páginas públicas
+- ⏳ 11.6 Extrair editores do admin em arquivos separados
+- ⏳ 11.7 Cleanup de eventos passados (auto-archive)
 
 ### 🔴 Pendências de ambiente / migrations
 1. **Rodar `003_cms_full.sql`** no Supabase (Phase 9, ainda pendente do user)
@@ -350,7 +333,9 @@ Nota: ainda vive em `lib/data.ts`. SPEC §4 prevê migração para `data/ministr
 | 8 | Backend CMS (Supabase tabelas + Storage + readers/writers) | ✅ Completa | `f289bd7` |
 | 9 | Cobertura total do admin (Igreja/Pastor/História + remover sugestão de valor) | ✅ Completa | `39c5483` |
 | 7 | SEO local (metadata + sitemap + robots + a11y) | ✅ Completa | `a2c9a79` |
-| **10** | **Refinos do admin (convite users + calendar preview + plano leitura + multi-líderes + HelpHints)** | 🔄 **Em execução** — 10.1–10.4 entregues. Faltam: 10.5 (HelpHints), 10.6–10.9 (bugs) | `fd2c9ee` + amends |
+| **10** | **Refinos do admin** | ✅ Completa (9 frentes + extra) | múltiplos commits |
+| **—** | **Redesign v3** (fora de fase numerada) | ✅ Aplicado (v3.1–v3.5) | múltiplos commits |
+| **11** | **Qualidade, robustez e polimento** | 🔄 Em execução — 11.1 e 11.2 entregues | múltiplos commits |
 
 ---
 
@@ -485,9 +470,10 @@ ao salvar.
 
 ### 🔵 UI / componentes novos pendentes (do `SPECDESIGN.md`)
 
-- ~~`<AvisoBanner>`~~ → entregue (`components/aviso-banner.tsx`)
-- Recovery password page — pendente
-- Convite de conteudista (form `/admin/usuarios`) — pendente
+- ~~`<AvisoBanner>`~~ → entregue
+- ~~Convite de conteudista~~ → entregue (10.1)
+- ~~Redesign v3~~ → entregue (v3.1–v3.5)
+- Recovery password page — pendente (11.3)
 
 ### 🔵 Conteúdo (não-código, depende do stakeholder)
 
