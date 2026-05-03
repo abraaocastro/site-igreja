@@ -162,76 +162,79 @@ export default function Home() {
               {nextEventImage && (
                 <div className="absolute inset-0 z-0">
                   <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${nextEventImage})` }} />
-                  <div className="absolute inset-0 bg-brand-gradient/80" />
+                  {/* Gradient: imagem visível no topo, escurece no meio e embaixo */}
+                  <div className="absolute inset-0" style={{
+                    background: 'linear-gradient(to bottom, rgba(2,11,33,.25) 0%, rgba(2,11,33,.55) 30%, rgba(2,11,33,.88) 55%, rgba(2,11,33,.97) 75%)',
+                  }} />
                 </div>
               )}
               {/* Glow effects */}
               <div className="absolute inset-0 z-0 pointer-events-none" style={{
-                background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.35), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.25), transparent 50%)',
+                background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.25), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.18), transparent 50%)',
               }} />
               {/* Grain */}
               <div className="bg-grain absolute inset-0 z-0 pointer-events-none" />
 
-              <div className="relative z-10 p-5 sm:p-6 lg:p-7 h-full grid grid-rows-[auto_1fr_auto] gap-4 sm:gap-6">
-                {/* Top chrome */}
-                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] uppercase tracking-[.16em] text-white/70">
+              <div className="relative z-10 p-5 sm:p-6 lg:p-7 h-full flex flex-col">
+                {/* Top chrome — empurrado pro topo */}
+                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] uppercase tracking-[.16em] text-white/70 mb-auto">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                     {next?.isLive ? 'Ao vivo' : 'Próximo'}
                   </span>
                 </div>
 
-                {/* Countdown block */}
-                <div className="self-center">
-                  <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/85 mb-3 sm:mb-4">
+                {/* Countdown block — empurrado pra baixo */}
+                <div className="mt-auto pt-6">
+                  <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/90 mb-3 sm:mb-4" style={{ textShadow: '0 1px 6px rgba(0,0,0,.5)' }}>
                     <span className="pulse-dot" style={{ background: 'var(--accent)', animationName: 'pulseCyan' }} />
                     {next?.isLive ? 'Acontecendo agora' : 'Próximo culto'}
                   </div>
 
-                  <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]">
+                  <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]" style={{ textShadow: '0 2px 12px rgba(0,0,0,.5)' }}>
                     {next?.event?.title || 'Culto da Família'}.
                   </div>
-                  <div className="font-mono text-[10px] sm:text-xs text-white/60 tracking-[.08em] uppercase mb-5 sm:mb-8">
+                  <div className="font-mono text-[10px] sm:text-xs text-white/70 tracking-[.08em] uppercase mb-5 sm:mb-6" style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}>
                     {next?.event
                       ? `${next.event.weekday} · ${next.event.time} · Templo Sede`
                       : 'Domingo · 19:00 · Templo Sede'}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3.5">
+                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3.5 mb-5 sm:mb-6">
                     {(['d','h','m','s'] as const).map((k, i) => {
                       const labels = ['Dias', 'Horas', 'Min', 'Seg']
                       const val = next ? [next.d, next.h, next.m, next.s][i] : 0
                       return (
-                        <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18]">
-                          <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]">
+                        <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18] backdrop-blur-sm bg-white/[.04] rounded-lg">
+                          <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]" style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
                             {String(val).padStart(2, '0')}
                           </div>
-                          <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/55 mt-1.5 sm:mt-2">{labels[i]}</div>
+                          <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/60 mt-1.5 sm:mt-2">{labels[i]}</div>
                         </div>
                       )
                     })}
                   </div>
-                </div>
 
-                {/* Bottom CTAs */}
-                <div className="flex gap-2 sm:gap-2.5">
-                  {assistirExternal ? (
-                    <a href={assistirUrl} target="_blank" rel="noreferrer"
-                      className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
-                        assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
-                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
-                    </a>
-                  ) : (
-                    <Link href={assistirUrl}
-                      className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
-                        assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
-                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
+                  {/* CTAs */}
+                  <div className="flex gap-2 sm:gap-2.5">
+                    {assistirExternal ? (
+                      <a href={assistirUrl} target="_blank" rel="noreferrer"
+                        className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
+                          assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
+                        <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
+                      </a>
+                    ) : (
+                      <Link href={assistirUrl}
+                        className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
+                          assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
+                        <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
+                      </Link>
+                    )}
+                    <Link href="/calendario"
+                      className="flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium bg-white/[.08] text-white border border-white/[.18] hover:bg-white/[.14] backdrop-blur-sm transition">
+                      <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Agenda
                     </Link>
-                  )}
-                  <Link href="/calendario"
-                    className="flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium bg-white/[.08] text-white border border-white/[.18] hover:bg-white/[.14] transition">
-                    <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Agenda
-                  </Link>
+                  </div>
                 </div>
               </div>
             </div>
