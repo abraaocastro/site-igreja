@@ -1,435 +1,167 @@
 'use client'
 
 import { useState, useEffect, FormEvent } from 'react'
-import { MapPin, Phone, Mail, Clock, Send, MessageSquare, Facebook, Instagram, Youtube, Loader2, Navigation, ExternalLink, MessageCircle } from 'lucide-react'
-import { SectionTitle } from '@/components/section-title'
+import Link from 'next/link'
+import { MapPin, Clock, Send, Loader2, MessageCircle, ArrowUpRight } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  getChurch,
-  formatAddressTwoLines,
-  formatPhone,
-  telHref,
-  mailtoHref,
-  whatsappHref,
-  getMapsEmbedUrl,
-  getMapsDirectionsUrl,
-  getMapsSearchUrl,
-  type Church,
+  getChurch, formatAddressOneLine, formatPhone,
+  whatsappHref, getMapsDirectionsUrl, type Church,
 } from '@/lib/site-data'
 import { getChurchEffective } from '@/lib/cms'
+import { cn } from '@/lib/utils'
 
 export default function ContatoPage() {
-  // Default sync (JSON) → useEffect substitui pelo Church efetivo (CMS overrides)
   const [church, setChurch] = useState<Church>(() => getChurch())
-  useEffect(() => {
-    let cancelled = false
-    getChurchEffective().then((c) => {
-      if (!cancelled) setChurch(c)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  useEffect(() => { let c = false; getChurchEffective().then(v => { if (!c) setChurch(v) }); return () => { c = true } }, [])
+
   const { endereco, contato, social } = church
-  const [enderecoLine1, enderecoLine2] = formatAddressTwoLines(endereco)
-  const phoneDisplay = formatPhone(contato.telefone)
-  const phoneLink = telHref(contato.telefone)
-  const emailLink = mailtoHref(contato.email)
-  const whatsappLink = whatsappHref(
-    contato.whatsapp,
-    `Olá! Falo através do site da ${church.nomeCurto}.`
-  )
+  const hasWhatsapp = Boolean(contato.whatsapp)
   const whatsappDisplay = formatPhone(contato.whatsapp)
-  const mapsEmbedUrl = getMapsEmbedUrl()
-  const mapsDirectionsUrl = getMapsDirectionsUrl()
-  const mapsSearchUrl = getMapsSearchUrl()
+  const mapsUrl = getMapsDirectionsUrl()
+
   const [form, setForm] = useState({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
 
-  const hasWhatsapp = Boolean(contato.whatsapp)
-
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!form.nome || !form.email || !form.assunto || !form.mensagem) {
-      toast.error('Preencha todos os campos obrigatórios.')
-      return
-    }
+    if (!form.nome || !form.email || !form.assunto || !form.mensagem) { toast.error('Preencha todos os campos obrigatórios.'); return }
     setSending(true)
     try {
-      const res = await fetch('/api/contato', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
+      const res = await fetch('/api/contato', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await res.json()
-      if (!res.ok) {
-        toast.error(data.error ?? 'Erro ao enviar mensagem.')
-        return
-      }
-      setSent(true)
-      toast.success('Mensagem enviada com sucesso! Entraremos em contato.')
-      setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
-    } catch {
-      toast.error('Erro de conexão. Tente novamente.')
-    } finally {
-      setSending(false)
-    }
+      if (!res.ok) { toast.error(data.error ?? 'Erro ao enviar.'); return }
+      setSent(true); toast.success('Mensagem enviada!'); setForm({ nome: '', email: '', telefone: '', assunto: '', mensagem: '' })
+    } catch { toast.error('Erro de conexão.') } finally { setSending(false) }
   }
 
   const sendViaWhatsapp = () => {
-    const assuntoLabels: Record<string, string> = {
-      visita: 'Quero fazer uma visita',
-      'pedido-oracao': 'Pedido de oração',
-      aconselhamento: 'Aconselhamento pastoral',
-      batismo: 'Quero ser batizado',
-      ministerio: 'Quero servir em um ministério',
-      duvidas: 'Dúvidas gerais',
-      outros: 'Outros',
-    }
-    const lines = [
-      `*Mensagem do site ${church.nomeCurto}*`,
-      ``,
-      `*Nome:* ${form.nome}`,
-      form.email ? `*E-mail:* ${form.email}` : '',
-      form.telefone ? `*Telefone:* ${form.telefone}` : '',
-      `*Assunto:* ${assuntoLabels[form.assunto] || form.assunto}`,
-      ``,
-      form.mensagem,
-    ].filter(Boolean).join('\n')
-
+    const labels: Record<string, string> = { visita: 'Quero visitar', 'pedido-oracao': 'Pedido de oração', aconselhamento: 'Aconselhamento', batismo: 'Batismo', ministerio: 'Servir em ministério', duvidas: 'Dúvidas', outros: 'Outros' }
+    const lines = [`*Site ${church.nomeCurto}*`, '', `*Nome:* ${form.nome}`, form.email ? `*E-mail:* ${form.email}` : '', `*Assunto:* ${labels[form.assunto] || form.assunto}`, '', form.mensagem].filter(Boolean).join('\n')
     const url = whatsappHref(contato.whatsapp, lines)
     if (url) window.open(url, '_blank')
   }
 
-  const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-    setForm({ ...form, [k]: e.target.value })
-
-  const baseInput =
-    'w-full px-4 py-2.5 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring transition text-sm'
+  const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [k]: e.target.value })
+  const inp = 'w-full h-11 px-4 rounded-full border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-ring'
 
   return (
     <div>
-      <section className="relative bg-brand-gradient text-white py-16 md:py-24 overflow-hidden">
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute -bottom-20 left-0 h-96 w-96 bg-accent rounded-full blur-3xl" />
-        </div>
-        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 text-sm mb-4">
-            <MessageSquare className="h-4 w-4 text-accent" />
-            Fale com a gente
+      {/* Hero */}
+      <section className="pt-20 pb-10 md:pt-28 md:pb-16">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="max-w-3xl">
+            <div className="eyebrow mb-5 inline-flex items-center gap-2.5"><span className="w-7 h-px bg-current opacity-50" /> Contato</div>
+            <h1 className="display mb-5" style={{ fontSize: 'clamp(40px, 6vw, 84px)' }}>
+              Fale <em className="text-brand-gradient">conosco.</em>
+            </h1>
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-[52ch]">
+              Tem dúvidas, quer fazer uma visita ou precisa de oração? Estamos aqui para você.
+            </p>
           </div>
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-serif font-bold mb-4">Entre em Contato</h1>
-          <p className="text-base md:text-lg opacity-90 max-w-2xl mx-auto">
-            Tire suas dúvidas, marque uma visita ou deixe um pedido de oração.
-          </p>
         </div>
       </section>
 
-      <section className="py-10 md:py-16 bg-background">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[1fr_1.2fr] gap-8">
-          {/* Info de contato */}
-          <div className="space-y-4">
-            <div className="bg-card rounded-2xl border border-border p-6 shadow-sm">
-              <SectionTitle title="Como nos encontrar" centered={false} className="mb-6" />
-              <ul className="space-y-5">
-                <li className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                    <MapPin className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Endereço</p>
-                    <p className="text-sm text-muted-foreground">{enderecoLine1}</p>
-                    <p className="text-sm text-muted-foreground">{enderecoLine2}</p>
-                  </div>
-                </li>
-                {phoneLink && (
-                  <li className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <Phone className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">Telefone</p>
-                      <a
-                        href={phoneLink}
-                        className="text-sm text-muted-foreground hover:text-primary transition"
-                      >
-                        {phoneDisplay}
-                      </a>
-                    </div>
-                  </li>
-                )}
-                {whatsappLink && (
-                  <li className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <MessageCircle className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">WhatsApp</p>
-                      <a
-                        href={whatsappLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm text-muted-foreground hover:text-primary transition"
-                      >
-                        {whatsappDisplay}
-                      </a>
-                    </div>
-                  </li>
-                )}
-                {emailLink && (
-                  <li className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <Mail className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">E-mail</p>
-                      <a
-                        href={emailLink}
-                        className="text-sm text-muted-foreground hover:text-primary transition break-all"
-                      >
-                        {contato.email}
-                      </a>
-                    </div>
-                  </li>
-                )}
-                <li className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">Horários</p>
-                    <p className="text-sm text-muted-foreground">Domingo: 9h e 19h</p>
-                    <p className="text-sm text-muted-foreground">Quarta: 19h30 | Sábado: 19h30 (Jovens)</p>
-                  </div>
-                </li>
-              </ul>
-              <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-sm font-semibold text-foreground mb-3">Siga-nos no Instagram</p>
-                <div className="flex flex-col gap-2">
-                  <a
-                    href={social.instagram}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
-                  >
-                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <Instagram className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">A Igreja</p>
-                      <p className="text-xs text-muted-foreground truncate">@pibaccapimgrosso</p>
-                    </div>
-                  </a>
-                  <a
-                    href={social.instagramPastor}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
-                  >
-                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <Instagram className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">Pastor Silas Barreto</p>
-                      <p className="text-xs text-muted-foreground truncate">@prsilasbarreto</p>
-                    </div>
-                  </a>
-                  <a
-                    href={social.instagramJovens}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-3 p-2 rounded-md border border-border hover:border-accent hover:bg-accent/5 transition"
-                  >
-                    <div className="h-9 w-9 rounded-full bg-accent/15 text-primary flex items-center justify-center shrink-0">
-                      <Instagram className="h-4 w-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">Rede de Jovens</p>
-                      <p className="text-xs text-muted-foreground truncate">@rdjmbc</p>
-                    </div>
-                  </a>
-                  {(social.facebook || social.youtube) && (
-                    <div className="flex gap-2 pt-2">
-                      {social.facebook && (
-                        <a
-                          href={social.facebook}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label="Facebook"
-                          className="h-10 w-10 rounded-full border border-border hover:border-accent hover:bg-accent/10 flex items-center justify-center text-muted-foreground hover:text-primary transition"
-                        >
-                          <Facebook className="h-4 w-4" />
-                        </a>
-                      )}
-                      {social.youtube && (
-                        <a
-                          href={social.youtube}
-                          target="_blank"
-                          rel="noreferrer"
-                          aria-label="YouTube"
-                          className="h-10 w-10 rounded-full border border-border hover:border-accent hover:bg-accent/10 flex items-center justify-center text-muted-foreground hover:text-primary transition"
-                        >
-                          <Youtube className="h-4 w-4" />
-                        </a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Mapa */}
-            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-              <div className="relative">
-                <iframe
-                  title={`Localização ${church.nomeCurto} — ${enderecoLine1}`}
-                  src={mapsEmbedUrl}
-                  className="w-full aspect-[4/3] border-0 block"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                />
-              </div>
-              <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-2 bg-card border-t border-border">
-                <a
-                  href={mapsDirectionsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-md font-semibold text-sm hover:bg-primary/90 transition shadow-sm hover:shadow-md hover:shadow-primary/30"
-                >
-                  <Navigation className="h-4 w-4" />
-                  Como chegar
-                </a>
-                <a
-                  href={mapsSearchUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 border border-border hover:border-primary hover:bg-primary/5 px-4 py-2.5 rounded-md font-medium text-sm text-foreground transition"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir no Maps
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Formulário */}
-          <div className="bg-card rounded-2xl border border-border p-6 md:p-8 shadow-sm">
-            <SectionTitle title="Envie uma mensagem" centered={false} className="mb-6" />
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="contato-nome" className="block text-sm font-medium text-foreground mb-1.5">Nome *</label>
-                  <input id="contato-nome" name="nome" autoComplete="name" required value={form.nome} onChange={update('nome')} className={baseInput} />
-                </div>
-                <div>
-                  <label htmlFor="contato-telefone" className="block text-sm font-medium text-foreground mb-1.5">Telefone</label>
-                  <input
-                    id="contato-telefone"
-                    name="telefone"
-                    type="tel"
-                    autoComplete="tel"
-                    value={form.telefone}
-                    onChange={update('telefone')}
-                    className={baseInput}
-                    placeholder="(XX) XXXXX-XXXX"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="contato-email" className="block text-sm font-medium text-foreground mb-1.5">E-mail *</label>
-                <input
-                  id="contato-email"
-                  name="email"
-                  required
-                  type="email"
-                  autoComplete="email"
-                  value={form.email}
-                  onChange={update('email')}
-                  className={baseInput}
-                />
-              </div>
-              <div>
-                <label htmlFor="contato-assunto" className="block text-sm font-medium text-foreground mb-1.5">Assunto *</label>
-                <select
-                  id="contato-assunto"
-                  name="assunto"
-                  required
-                  value={form.assunto}
-                  onChange={(e) => setForm({ ...form, assunto: e.target.value })}
-                  className={baseInput}
-                >
-                  <option value="">Selecione um assunto</option>
-                  <option value="visita">Quero fazer uma visita</option>
-                  <option value="pedido-oracao">Pedido de oração</option>
-                  <option value="aconselhamento">Aconselhamento pastoral</option>
-                  <option value="batismo">Quero ser batizado</option>
-                  <option value="ministerio">Quero servir em um ministério</option>
-                  <option value="duvidas">Dúvidas gerais</option>
-                  <option value="outros">Outros</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="contato-mensagem" className="block text-sm font-medium text-foreground mb-1.5">Mensagem *</label>
-                <textarea
-                  id="contato-mensagem"
-                  name="mensagem"
-                  required
-                  value={form.mensagem}
-                  onChange={update('mensagem')}
-                  rows={5}
-                  className={baseInput}
-                  placeholder="Escreva sua mensagem aqui..."
-                />
-              </div>
+      {/* Content */}
+      <section className="pb-20 md:pb-28">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[7fr_5fr] gap-8 lg:gap-14">
+            {/* Form */}
+            <div className="card-soft rounded-[22px] p-7 md:p-10 hover:!transform-none">
               {sent ? (
-                <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-4 text-center space-y-2">
-                  <p className="text-green-800 dark:text-green-200 font-medium">Mensagem recebida!</p>
-                  <p className="text-sm text-green-700 dark:text-green-300">Entraremos em contato em breve.</p>
-                  <button
-                    type="button"
-                    onClick={() => setSent(false)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Enviar outra mensagem
-                  </button>
+                <div className="text-center py-16 space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-accent/15 grid place-items-center mx-auto"><Send className="h-7 w-7 text-accent" /></div>
+                  <h2 className="font-serif text-2xl tracking-tight">Mensagem recebida!</h2>
+                  <p className="text-muted-foreground text-sm">Entraremos em contato em breve.</p>
+                  <button onClick={() => setSent(false)} className="text-primary text-sm hover:underline">Enviar outra</button>
                 </div>
               ) : (
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="submit"
-                    disabled={sending}
-                    className="flex-1 inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-md font-semibold hover:bg-primary/90 transition disabled:opacity-60 shadow-md hover:shadow-lg hover:shadow-primary/30"
-                  >
-                    {sending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="h-4 w-4" />
-                        Enviar mensagem
-                      </>
-                    )}
-                  </button>
-                  {hasWhatsapp && form.nome && form.assunto && form.mensagem && (
-                    <button
-                      type="button"
-                      onClick={sendViaWhatsapp}
-                      className="flex-1 inline-flex items-center justify-center gap-2 bg-green-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-green-700 transition shadow-md"
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      Enviar via WhatsApp
+                <form onSubmit={onSubmit} className="space-y-4">
+                  <h2 className="font-serif text-2xl tracking-tight mb-2">Envie sua mensagem</h2>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <input type="text" placeholder="Seu nome *" value={form.nome} onChange={update('nome')} required className={inp} />
+                    <input type="email" placeholder="Seu e-mail *" value={form.email} onChange={update('email')} required className={inp} />
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <input type="tel" placeholder="Telefone (opcional)" value={form.telefone} onChange={update('telefone')} className={inp} />
+                    <select value={form.assunto} onChange={update('assunto')} required className={cn(inp, !form.assunto && 'text-muted-foreground')}>
+                      <option value="">Assunto *</option>
+                      <option value="visita">Quero fazer uma visita</option>
+                      <option value="pedido-oracao">Pedido de oração</option>
+                      <option value="aconselhamento">Aconselhamento pastoral</option>
+                      <option value="batismo">Quero ser batizado</option>
+                      <option value="ministerio">Servir em um ministério</option>
+                      <option value="duvidas">Dúvidas gerais</option>
+                      <option value="outros">Outros</option>
+                    </select>
+                  </div>
+                  <textarea placeholder="Sua mensagem *" value={form.mensagem} onChange={update('mensagem')} required rows={5}
+                    className="w-full px-4 py-3 rounded-[16px] border border-border bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none" />
+                  <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                    <button type="submit" disabled={sending} className="btn btn-primary h-[46px] px-6 rounded-full text-[15px] flex-1 justify-center">
+                      {sending ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</> : <><Send className="h-4 w-4" /> Enviar mensagem</>}
                     </button>
+                    {hasWhatsapp && form.nome && form.assunto && form.mensagem && (
+                      <button type="button" onClick={sendViaWhatsapp} className="h-[46px] px-6 rounded-full text-[15px] font-medium inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition flex-1">
+                        <MessageCircle className="h-4 w-4" /> WhatsApp
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground text-center">Suas informações serão usadas apenas para contato da igreja.</p>
+                </form>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="space-y-5">
+              <div className="card-soft rounded-[22px] p-7 hover:!transform-none space-y-4">
+                <h3 className="font-serif text-xl tracking-tight">Informações</h3>
+                <div className="space-y-3.5">
+                  {[
+                    { icon: <MapPin className="h-4 w-4" />, label: 'Endereço', value: formatAddressOneLine(endereco), href: mapsUrl },
+                    { icon: <Clock className="h-4 w-4" />, label: 'Cultos', value: 'Dom 9h e 19h · Qua 19h30' },
+                    ...(hasWhatsapp ? [{ icon: <MessageCircle className="h-4 w-4" />, label: 'WhatsApp', value: whatsappDisplay || '', href: whatsappHref(contato.whatsapp, 'Olá!') || undefined }] : []),
+                  ].map((r, i) => (
+                    <div key={i} className="flex items-start gap-3.5">
+                      <div className="w-9 h-9 rounded-full bg-surface-2 grid place-items-center shrink-0 mt-0.5">{r.icon}</div>
+                      <div className="min-w-0">
+                        <div className="font-mono text-[10px] tracking-[.14em] text-muted-foreground uppercase">{r.label}</div>
+                        {r.href ? (
+                          <a href={r.href} target="_blank" rel="noreferrer" className="text-sm text-foreground hover:text-primary transition break-words">{r.value}</a>
+                        ) : (
+                          <div className="text-sm">{r.value}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Redes */}
+              <div className="card-soft rounded-[22px] p-7 hover:!transform-none">
+                <h3 className="font-serif text-xl tracking-tight mb-4">Redes sociais</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  {social.instagram && (
+                    <a href={`https://instagram.com/${social.instagram.replace('@','')}`} target="_blank" rel="noreferrer" className="btn btn-ghost h-10 px-4 rounded-full text-sm">Instagram</a>
+                  )}
+                  {social.youtube && (
+                    <a href={social.youtube} target="_blank" rel="noreferrer" className="btn btn-ghost h-10 px-4 rounded-full text-sm">YouTube</a>
                   )}
                 </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Ao enviar, você concorda que suas informações sejam usadas apenas para contato da igreja.
-              </p>
-            </form>
+              </div>
+
+              {/* Map */}
+              <a href={mapsUrl} target="_blank" rel="noreferrer" className="block rounded-[22px] overflow-hidden border border-border hover:border-foreground transition-colors" style={{ minHeight: 200 }}>
+                <div className="w-full h-[200px] relative" style={{
+                  background: 'linear-gradient(160deg, rgba(10,41,115,.5), rgba(2,11,33,.2) 70%), repeating-linear-gradient(135deg, var(--surface-3) 0 24px, var(--surface-2) 24px 48px)',
+                }}>
+                  <span className="absolute top-4 left-4 inline-flex items-center gap-2 h-8 px-3.5 bg-background/95 border border-border rounded-full text-xs font-medium">
+                    <MapPin className="h-3 w-3" /> Ver no mapa <ArrowUpRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </a>
+            </div>
           </div>
         </div>
       </section>

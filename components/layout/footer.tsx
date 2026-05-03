@@ -17,7 +17,7 @@ export function Footer() {
   const mapsUrl = getMapsDirectionsUrl()
 
   return (
-    <footer className="relative overflow-hidden" style={{ background: 'var(--foreground)', color: 'var(--background)' }}>
+    <footer className="relative overflow-hidden bg-brand-navy text-white">
       {/* Wordmark gigante */}
       <div className="pointer-events-none absolute bottom-[-40px] left-[-20px] select-none font-serif italic leading-[0.85] tracking-[-0.05em] opacity-[0.05]"
         style={{ fontSize: 'clamp(120px, 22vw, 360px)' }}>
