@@ -61,6 +61,14 @@ export default function Home() {
 
   const next = useNextEventCountdown(eventos)
   const weekEvents = useMemo(() => getWeekEvents(eventos), [eventos])
+
+  // Imagem do próximo evento (para o card hero)
+  const nextEventImage = useMemo(() => {
+    if (!next?.event) return null
+    // Procurar evento especial do CMS que tem imagem
+    const match = eventos.find(e => e.title === next.event!.title && e.imageUrl)
+    return match?.imageUrl ?? null
+  }, [next, eventos])
   const proximosEventos = [...eventos]
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .filter((e) => new Date(e.date) >= new Date(new Date().toDateString()))
@@ -84,14 +92,16 @@ export default function Home() {
     <div className="flex flex-col">
 
       {/* ════════ HERO ════════ */}
-      <section className="pt-6 md:pt-9 pb-0">
-        <div className="mx-auto max-w-[1320px] px-6 md:px-10">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-7 lg:gap-9 items-stretch">
+      <section className="pt-4 md:pt-9 pb-0">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
+
+          {/* Mobile: stack vertical. Desktop: 2 colunas */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] gap-6 lg:gap-9 items-stretch">
 
             {/* LEFT — editorial copy */}
             <div className="flex flex-col py-2">
               {/* Meta */}
-              <div className="eyebrow flex items-center gap-5 flex-wrap mb-7 lg:mb-9">
+              <div className="eyebrow flex items-center gap-3 sm:gap-5 flex-wrap mb-5 lg:mb-9">
                 <span className="inline-flex items-center gap-2">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M5 21V7l8-4 8 4v14"/></svg>
                   PIB Capim Grosso
@@ -100,54 +110,61 @@ export default function Home() {
                 <span>Desde 1978</span>
               </div>
 
-              {/* Title */}
-              <h1 className="display display-tight" style={{ fontSize: 'clamp(40px, 8vw, 132px)' }}>
+              {/* Title — smaller on mobile */}
+              <h1 className="display display-tight text-[clamp(32px,7.5vw,132px)]">
                 Um lugar<br />
                 <span className="relative inline-block">
                   para voltar
-                  <span className="absolute left-0 right-0 bottom-1 h-3 lg:h-3.5 bg-accent/35 -z-10 rounded-sm" />
+                  <span className="absolute left-0 right-0 bottom-0.5 lg:bottom-1 h-2 lg:h-3.5 bg-accent/35 -z-10 rounded-sm" />
                 </span><br />
                 <span className="text-brand-gradient italic">pra casa.</span>
               </h1>
 
-              {/* Lede */}
-              <p className="text-muted-foreground leading-relaxed max-w-[36ch] mt-14 lg:mt-18" style={{ fontSize: 'clamp(16px, 1.4vw, 19px)' }}>
+              {/* Lede — hidden on small mobile to save space */}
+              <p className="hidden sm:block text-muted-foreground leading-relaxed max-w-[36ch] mt-8 lg:mt-14 text-[clamp(15px,1.4vw,19px)]">
                 A Primeira Igreja Batista de Capim Grosso é onde fé, comunhão e
                 crescimento espiritual se encontram — e onde toda história tem espaço.
               </p>
 
               {/* CTAs */}
-              <div className="flex flex-wrap gap-2.5 mt-9">
-                <Link href="/quem-somos" className="btn btn-primary h-[46px] px-5 rounded-full text-[15px]">
+              <div className="flex flex-wrap gap-2.5 mt-6 lg:mt-9">
+                <Link href="/quem-somos" className="btn btn-primary h-10 lg:h-[46px] px-4 lg:px-5 rounded-full text-sm lg:text-[15px]">
                   Conheça-nos <ArrowUpRight className="h-4 w-4" />
                 </Link>
-                <Link href="/visao" className="btn btn-ghost h-[46px] px-5 rounded-full text-[15px]">
+                <Link href="/visao" className="btn btn-ghost h-10 lg:h-[46px] px-4 lg:px-5 rounded-full text-sm lg:text-[15px]">
                   Nossa visão
                 </Link>
               </div>
 
-              {/* Spacer */}
-              <div className="flex-1 min-h-8" />
+              {/* Spacer — only on desktop */}
+              <div className="hidden lg:block flex-1 min-h-8" />
 
-              {/* Signals */}
-              <div className="mt-10 lg:mt-14 border-t border-border pt-6 grid grid-cols-3 gap-0">
+              {/* Signals — hidden on mobile, shown sm+ */}
+              <div className="hidden sm:grid mt-8 lg:mt-14 border-t border-border pt-5 grid-cols-3 gap-0">
                 {[
-                  { num: '48', sup: 'anos', label: 'de história em Capim Grosso, BA' },
-                  { num: String(ministerios.length || 6), sup: 'min.', label: 'ministérios atuando toda semana' },
-                  { num: '2x', sup: 'dom.', label: 'cultos aos domingos · 9h e 19h' },
+                  { num: '48', sup: 'anos', label: 'de história em Capim Grosso' },
+                  { num: String(ministerios.length || 6), sup: 'min.', label: 'ministérios toda semana' },
+                  { num: '2x', sup: 'dom.', label: 'cultos · 9h e 19h' },
                 ].map((s, i) => (
-                  <div key={i} className={cn('px-2.5 lg:px-4', i === 0 && 'pl-0', i < 2 && 'border-r border-border')}>
-                    <div className="font-serif text-2xl lg:text-[32px] leading-none tracking-tight">
-                      {s.num}<sup className="text-[10px] lg:text-xs align-top ml-0.5 text-muted-foreground font-mono font-normal">{s.sup}</sup>
+                  <div key={i} className={cn('px-2 lg:px-4', i === 0 && 'pl-0', i < 2 && 'border-r border-border')}>
+                    <div className="font-serif text-xl lg:text-[32px] leading-none tracking-tight">
+                      {s.num}<sup className="text-[9px] lg:text-xs align-top ml-0.5 text-muted-foreground font-mono font-normal">{s.sup}</sup>
                     </div>
-                    <div className="text-[10px] lg:text-[11px] text-muted-foreground leading-snug mt-1.5">{s.label}</div>
+                    <div className="text-[9px] lg:text-[11px] text-muted-foreground leading-snug mt-1">{s.label}</div>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* RIGHT — countdown feature card */}
-            <div className="relative rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[420px] lg:min-h-[560px]">
+            <div className="relative rounded-[18px] sm:rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[340px] sm:min-h-[380px] lg:min-h-[560px]">
+              {/* Background image from next event */}
+              {nextEventImage && (
+                <div className="absolute inset-0 z-0">
+                  <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${nextEventImage})` }} />
+                  <div className="absolute inset-0 bg-brand-gradient/80" />
+                </div>
+              )}
               {/* Glow effects */}
               <div className="absolute inset-0 z-0 pointer-events-none" style={{
                 background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.35), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.25), transparent 50%)',
@@ -155,41 +172,41 @@ export default function Home() {
               {/* Grain */}
               <div className="bg-grain absolute inset-0 z-0 pointer-events-none" />
 
-              <div className="relative z-10 p-6 lg:p-7 h-full grid grid-rows-[auto_1fr_auto] gap-6">
+              <div className="relative z-10 p-5 sm:p-6 lg:p-7 h-full grid grid-rows-[auto_1fr_auto] gap-4 sm:gap-6">
                 {/* Top chrome */}
-                <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[.16em] text-white/70">
+                <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] uppercase tracking-[.16em] text-white/70">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                    {next?.isLive ? 'Ao vivo' : 'Ao vivo · Próximo'}
+                    {next?.isLive ? 'Ao vivo' : 'Próximo'}
                   </span>
                 </div>
 
                 {/* Countdown block */}
-                <div className="self-center py-5">
-                  <div className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-white/85 mb-4">
+                <div className="self-center">
+                  <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/85 mb-3 sm:mb-4">
                     <span className="pulse-dot" style={{ background: 'var(--accent)', animationName: 'pulseCyan' }} />
                     {next?.isLive ? 'Acontecendo agora' : 'Próximo culto'}
                   </div>
 
-                  <div className="font-serif leading-[0.95] tracking-tight mb-2" style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}>
+                  <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]">
                     {next?.event?.title || 'Culto da Família'}.
                   </div>
-                  <div className="font-mono text-xs text-white/60 tracking-[.08em] uppercase mb-8">
+                  <div className="font-mono text-[10px] sm:text-xs text-white/60 tracking-[.08em] uppercase mb-5 sm:mb-8">
                     {next?.event
                       ? `${next.event.weekday} · ${next.event.time} · Templo Sede`
                       : 'Domingo · 19:00 · Templo Sede'}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 lg:gap-3.5">
+                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3.5">
                     {(['d','h','m','s'] as const).map((k, i) => {
                       const labels = ['Dias', 'Horas', 'Min', 'Seg']
                       const val = next ? [next.d, next.h, next.m, next.s][i] : 0
                       return (
-                        <div key={k} className="text-center py-3 lg:py-4 border-t border-b border-white/[.18]">
-                          <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums" style={{ fontSize: 'clamp(36px, 5.5vw, 64px)' }}>
+                        <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18]">
+                          <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]">
                             {String(val).padStart(2, '0')}
                           </div>
-                          <div className="font-mono text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/55 mt-2">{labels[i]}</div>
+                          <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/55 mt-1.5 sm:mt-2">{labels[i]}</div>
                         </div>
                       )
                     })}
@@ -197,23 +214,23 @@ export default function Home() {
                 </div>
 
                 {/* Bottom CTAs */}
-                <div className="flex flex-wrap gap-2.5">
+                <div className="flex gap-2 sm:gap-2.5">
                   {assistirExternal ? (
                     <a href={assistirUrl} target="_blank" rel="noreferrer"
-                      className={cn('flex-1 min-w-[140px] h-11 rounded-full inline-flex items-center justify-center gap-2 text-[14px] font-medium transition-all',
+                      className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
                         assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
-                      <Play className="h-4 w-4" fill="currentColor" /> {assistirLabel}
+                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
                     </a>
                   ) : (
                     <Link href={assistirUrl}
-                      className={cn('flex-1 min-w-[140px] h-11 rounded-full inline-flex items-center justify-center gap-2 text-[14px] font-medium transition-all',
+                      className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
                         assistirAoVivo ? 'bg-destructive text-white animate-pulse' : 'bg-accent text-accent-foreground hover:shadow-lg hover:shadow-accent/40 hover:-translate-y-0.5')}>
-                      <Play className="h-4 w-4" fill="currentColor" /> {assistirLabel}
+                      <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="currentColor" /> {assistirLabel}
                     </Link>
                   )}
                   <Link href="/calendario"
-                    className="flex-1 min-w-[140px] h-11 rounded-full inline-flex items-center justify-center gap-2 text-[14px] font-medium bg-white/[.08] text-white border border-white/[.18] hover:bg-white/[.14] transition">
-                    <Calendar className="h-4 w-4" /> Agenda
+                    className="flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium bg-white/[.08] text-white border border-white/[.18] hover:bg-white/[.14] transition">
+                    <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Agenda
                   </Link>
                 </div>
               </div>
@@ -221,7 +238,7 @@ export default function Home() {
           </div>
 
           {/* MARQUEE STRIP */}
-          <div className="schedule-strip mt-7" aria-label="Programação semanal">
+          <div className="schedule-strip mt-5 sm:mt-7" aria-label="Programação semanal">
             {weekEvents.length > 0 ? (
               <div className="marquee-track">
                 {[...weekEvents, ...weekEvents].map((e, i) => (
@@ -234,9 +251,9 @@ export default function Home() {
                 ))}
               </div>
             ) : (
-              <div className="text-center w-full text-sm text-white/60 py-2">
+              <div className="text-center w-full text-xs sm:text-sm text-white/60 py-2">
                 Sem mais eventos esta semana —{' '}
-                <Link href="/eventos" className="text-accent hover:underline">veja a programação completa</Link>
+                <Link href="/eventos" className="text-accent hover:underline">veja a programação</Link>
               </div>
             )}
           </div>
