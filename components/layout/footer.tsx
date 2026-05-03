@@ -2,225 +2,100 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import { ArrowUpRight, Navigation } from 'lucide-react'
 import {
-  MapPin, Phone, Mail, Clock, Facebook, Instagram, Youtube, Navigation, MessageCircle, ArrowUpRight,
-} from 'lucide-react'
-import {
-  getChurch, formatAddressOneLine, formatPhone, telHref, mailtoHref, whatsappHref, getMapsDirectionsUrl,
+  getChurch, formatAddressOneLine, formatPhone, whatsappHref, getMapsDirectionsUrl,
   type Church,
 } from '@/lib/site-data'
-import { getChurchEffective, getMarca, DEFAULT_MARCA } from '@/lib/cms'
-
-const footerLinks = {
-  igreja: [
-    { name: 'Quem Somos', href: '/quem-somos' },
-    { name: 'Nossa História', href: '/historia' },
-    { name: 'Nossa Visão', href: '/visao' },
-    { name: 'Conheça o Pastor', href: '/pastor' },
-  ],
-  programacao: [
-    { name: 'Ministérios', href: '/ministerios' },
-    { name: 'Eventos', href: '/eventos' },
-    { name: 'Calendário', href: '/calendario' },
-    { name: 'Plano de Leitura', href: '/plano-leitura' },
-  ],
-  participar: [
-    { name: 'Contribua', href: '/contribua' },
-    { name: 'Fale Conosco', href: '/contato' },
-    { name: 'Área Restrita', href: '/login' },
-  ],
-}
+import { getChurchEffective } from '@/lib/cms'
 
 export function Footer() {
-  // Inicia com defaults do JSON (renderiza imediato no SSR / hidratação),
-  // depois substitui pelo `Church` efetivo vindo do CMS.
   const [church, setChurch] = useState<Church>(() => getChurch())
-  const [marca, setMarca] = useState<{
-    logo: string
-    tituloPrincipal: string
-    subtitulo: string
-  }>({
-    logo: DEFAULT_MARCA.marcaLogo,
-    tituloPrincipal: DEFAULT_MARCA.marcaTituloPrincipal,
-    subtitulo: DEFAULT_MARCA.marcaSubtitulo,
-  })
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([getChurchEffective(), getMarca()]).then(([c, m]) => {
-      if (cancelled) return
-      setChurch(c)
-      setMarca(m)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-  const { endereco, contato, social } = church
-  const phoneDisplay = formatPhone(contato.telefone)
-  const phoneLink = telHref(contato.telefone)
-  const emailLink = mailtoHref(contato.email)
-  const whatsappLink = whatsappHref(contato.whatsapp)
-  const whatsappDisplay = formatPhone(contato.whatsapp)
-  const mapsDirectionsUrl = getMapsDirectionsUrl()
+  useEffect(() => { getChurchEffective().then(setChurch) }, [])
+
+  const { social } = church
+  const mapsUrl = getMapsDirectionsUrl()
 
   return (
-    <footer className="bg-[#07091A] text-white relative overflow-hidden">
-      {/* Big wordmark */}
-      <div className="pointer-events-none absolute -bottom-16 md:-bottom-24 left-0 right-0 text-center select-none opacity-[0.06]">
-        <span className="display text-[22vw] leading-none font-semibold whitespace-nowrap">
-          Canaã
-        </span>
+    <footer className="relative overflow-hidden" style={{ background: 'var(--foreground)', color: 'var(--background)' }}>
+      {/* Wordmark gigante */}
+      <div className="pointer-events-none absolute bottom-[-40px] left-[-20px] select-none font-serif italic leading-[0.85] tracking-[-0.05em] opacity-[0.05]"
+        style={{ fontSize: 'clamp(120px, 22vw, 360px)' }}>
+        Canaã
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-20">
-        {/* Top CTA */}
-        <div className="mb-12 md:mb-16 grid md:grid-cols-[1fr_auto] gap-6 items-end">
-          <div>
-            <div className="eyebrow text-accent mb-3">Venha nos visitar</div>
-            <h3 className="display text-4xl md:text-5xl lg:text-6xl text-white text-balance max-w-2xl">
-              Há um assento esperando por você.
-            </h3>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/contato" className="btn-primary bg-white text-[#07091A] hover:bg-accent">
-              Fale com a igreja <ArrowUpRight className="h-4 w-4" />
+      <div className="relative z-10 mx-auto max-w-[1320px] px-6 md:px-10 pt-[88px] pb-10">
+        {/* CTA */}
+        <div className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr] gap-8 items-end pb-14 mb-14 border-b border-white/[.12]">
+          <h2 className="font-serif tracking-tight leading-none max-w-[16ch]" style={{ fontSize: 'clamp(36px, 4.5vw, 60px)' }}>
+            Há um <em className="italic text-accent">assento</em><br />esperando por você.
+          </h2>
+          <div className="flex flex-wrap gap-2.5">
+            <Link href="/contato" className="btn-accent h-[46px] px-5 rounded-full text-[15px] font-medium">
+              Vir nos visitar
+              <ArrowUpRight className="h-4 w-4" />
             </Link>
-            <a href={mapsDirectionsUrl} target="_blank" rel="noreferrer"
-               className="btn-ghost border-white/25 text-white hover:bg-white/10 hover:border-white">
-              Como chegar <Navigation className="h-4 w-4" />
-            </a>
+            <Link href="/calendario"
+              className="h-[46px] px-5 rounded-full text-[15px] font-medium inline-flex items-center gap-2 border border-white/20 text-white hover:bg-white hover:text-foreground transition">
+              Ver agenda
+            </Link>
           </div>
         </div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10">
-          {/* Brand */}
-          <div className="lg:col-span-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative h-12 w-12 bg-white rounded-xl p-1.5 shrink-0">
-                <Image
-                  src={marca.logo}
-                  alt={marca.tituloPrincipal}
-                  fill
-                  sizes="48px"
-                  className="object-contain"
-                  unoptimized={marca.logo.startsWith('http')}
-                />
-              </div>
-              <div>
-                <p className="text-sm font-semibold leading-tight">{marca.tituloPrincipal}</p>
-                <p className="text-xs opacity-70 uppercase tracking-wider">{marca.subtitulo}</p>
-              </div>
-            </div>
-            <p className="text-sm opacity-75 mb-6 leading-relaxed max-w-sm">
-              Uma comunidade de fé, amor e esperança — desde 1978, servindo a região do piemonte.
+        {/* Columns */}
+        <div className="grid grid-cols-2 md:grid-cols-[2fr_1fr_1fr_1fr] gap-8 md:gap-12">
+          {/* About */}
+          <div className="col-span-2 md:col-span-1">
+            <div className="font-mono text-[11px] uppercase tracking-[.18em] text-white/50 mb-5">— A igreja</div>
+            <p className="text-[14px] leading-[1.6] text-white/70 max-w-[36ch]">
+              Primeira Igreja Batista de Capim Grosso. Uma comunidade de fé, comunhão e missão desde 1978, no coração da Bahia.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <SocialLink href={social.instagram} label="Instagram"><Instagram className="h-4 w-4" /></SocialLink>
-              <SocialLink href={social.instagramJovens} label="Rede de Jovens">RDJ</SocialLink>
-              <SocialLink href={social.instagramPastor} label="Pastor">PR</SocialLink>
-              {social.facebook && <SocialLink href={social.facebook} label="Facebook"><Facebook className="h-4 w-4" /></SocialLink>}
-              {social.youtube && <SocialLink href={social.youtube} label="YouTube"><Youtube className="h-4 w-4" /></SocialLink>}
-            </div>
           </div>
 
-          {/* Link columns */}
-          <FooterCol title="A Igreja" links={footerLinks.igreja} />
-          <FooterCol title="Programação" links={footerLinks.programacao} />
-          <FooterCol title="Participe" links={footerLinks.participar} />
+          {/* Conheça */}
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[.18em] text-white/50 mb-5">— Conheça</div>
+            <ul className="space-y-2.5 text-[14px] text-white/85">
+              <li><Link href="/quem-somos" className="hover:text-accent transition">Quem somos</Link></li>
+              <li><Link href="/historia" className="hover:text-accent transition">História</Link></li>
+              <li><Link href="/visao" className="hover:text-accent transition">Visão</Link></li>
+              <li><Link href="/pastor" className="hover:text-accent transition">Pastor</Link></li>
+            </ul>
+          </div>
 
-          {/* Contact */}
-          <div className="lg:col-span-3">
-            <h4 className="text-[11px] font-mono uppercase tracking-wider text-accent mb-4">Contato</h4>
-            <ul className="space-y-3 text-sm">
-              <li>
-                <a href={mapsDirectionsUrl} target="_blank" rel="noreferrer"
-                  className="flex items-start gap-2 opacity-85 hover:opacity-100 hover:text-accent transition">
-                  <MapPin className="h-4 w-4 mt-0.5 shrink-0 text-accent" />
-                  <span>{formatAddressOneLine(endereco)}, CEP {endereco.cep}</span>
-                </a>
-              </li>
-              {phoneLink && (
-                <li className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0 text-accent" />
-                  <a href={phoneLink} className="opacity-85 hover:opacity-100 hover:text-accent">{phoneDisplay}</a>
-                </li>
+          {/* Participe */}
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[.18em] text-white/50 mb-5">— Participe</div>
+            <ul className="space-y-2.5 text-[14px] text-white/85">
+              <li><Link href="/ministerios" className="hover:text-accent transition">Ministérios</Link></li>
+              <li><Link href="/eventos" className="hover:text-accent transition">Eventos</Link></li>
+              <li><Link href="/calendario" className="hover:text-accent transition">Calendário</Link></li>
+              <li><Link href="/plano-leitura" className="hover:text-accent transition">Plano de leitura</Link></li>
+            </ul>
+          </div>
+
+          {/* Contato */}
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[.18em] text-white/50 mb-5">— Contato</div>
+            <ul className="space-y-2.5 text-[14px] text-white/85">
+              <li><Link href="/contato" className="hover:text-accent transition">Fale conosco</Link></li>
+              <li><Link href="/contribua" className="hover:text-accent transition">Contribua</Link></li>
+              {social.instagram && (
+                <li><a href={`https://instagram.com/${social.instagram.replace('@','')}`} target="_blank" rel="noreferrer" className="hover:text-accent transition">Instagram</a></li>
               )}
-              {whatsappLink && (
-                <li className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 shrink-0 text-accent" />
-                  <a href={whatsappLink} target="_blank" rel="noreferrer" className="opacity-85 hover:opacity-100 hover:text-accent">
-                    {whatsappDisplay} <span className="opacity-60">(WhatsApp)</span>
-                  </a>
-                </li>
+              {social.youtube && (
+                <li><a href={social.youtube} target="_blank" rel="noreferrer" className="hover:text-accent transition">YouTube</a></li>
               )}
-              {emailLink && (
-                <li className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0 text-accent" />
-                  <a href={emailLink} className="opacity-85 hover:opacity-100 hover:text-accent break-all">{contato.email}</a>
-                </li>
-              )}
-              <li className="flex items-start gap-2">
-                <Clock className="h-4 w-4 mt-0.5 shrink-0 text-accent" />
-                <div className="opacity-85">
-                  <p>Domingo · 9h e 19h</p>
-                  <p>Quarta · 19h30</p>
-                  <p>Sábado · 19h30 (Jovens)</p>
-                </div>
-              </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-16 pt-6 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-xs opacity-60">
-            © {new Date().getFullYear()} Primeira Igreja Batista de Capim Grosso. Todos os direitos reservados.
-          </p>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="opacity-60">Produzido por</span>
-            <span className="font-medium opacity-90">Wise Tech Projects</span>
-            <a
-              href="https://www.instagram.com/wise.techprojects/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-accent hover:text-accent-foreground transition opacity-90 hover:opacity-100"
-              aria-label="Conhecer Wise Tech Projects no Instagram"
-            >
-              Conhecer
-              <ArrowUpRight className="h-3 w-3" />
-            </a>
-          </div>
+        {/* Bottom */}
+        <div className="mt-14 pt-6 border-t border-white/[.08] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 font-mono text-[11px] text-white/40 tracking-[.08em]">
+          <span>© {new Date().getFullYear()} PIBAC</span>
+          <span>Capim Grosso · Bahia</span>
         </div>
       </div>
     </footer>
-  )
-}
-
-function FooterCol({ title, links }: { title: string; links: { name: string; href: string }[] }) {
-  return (
-    <div className="lg:col-span-2">
-      <h4 className="text-[11px] font-mono uppercase tracking-wider text-accent mb-4">{title}</h4>
-      <ul className="space-y-2.5">
-        {links.map((l) => (
-          <li key={l.name}>
-            <Link href={l.href} className="text-sm opacity-80 hover:opacity-100 hover:text-accent transition inline-block">
-              {l.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function SocialLink({ href, label, children }: { href?: string; label: string; children: React.ReactNode }) {
-  if (!href) return null
-  return (
-    <a href={href} target="_blank" rel="noreferrer" aria-label={label}
-       className="h-9 w-9 rounded-full bg-white/10 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition text-xs font-semibold">
-      {children}
-    </a>
   )
 }
