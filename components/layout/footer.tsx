@@ -94,6 +94,9 @@ export function Footer() {
         <div className="mt-14 pt-6 border-t border-white/[.08] flex flex-col md:flex-row justify-between items-start md:items-center gap-4 font-mono text-[11px] text-white/40 tracking-[.08em]">
           <span>© {new Date().getFullYear()} PIBAC</span>
           <span>Capim Grosso · Bahia</span>
+          <a href="https://instagram.com/wisetechprojects" target="_blank" rel="noreferrer" className="hover:text-accent transition">
+            Desenvolvido por @wisetechprojects
+          </a>
         </div>
       </div>
     </footer>

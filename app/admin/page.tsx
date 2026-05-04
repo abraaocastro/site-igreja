@@ -49,16 +49,12 @@ import {
 import { useAuth } from '@/lib/auth'
 import { type ChurchAviso, type AvisoSeveridade } from '@/lib/site-data'
 import {
-  getBanners,
   getMinisterios,
   getEventos,
   getTextos,
   getAviso,
   getHistoria,
   getPlanoLeitura,
-  upsertBanner,
-  createBanner,
-  deleteBanner,
   upsertMinisterio,
   createMinisterio,
   deleteMinisterio,
@@ -79,7 +75,6 @@ import {
   saveAviso,
   uploadImage,
   DEFAULT_TEXTOS,
-  type CmsBanner,
   type CmsMinisterio,
   type CmsEvento,
   type CmsTextos,
@@ -99,7 +94,6 @@ type Tab =
   | 'igreja'
   | 'pastor'
   | 'historia'
-  | 'banners'
   | 'ministerios'
   | 'eventos'
   | 'textos'
@@ -113,7 +107,6 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('overview')
 
   // Estado vindo do banco — começa vazio, hidrata via useEffect.
-  const [banners, setBanners] = useState<CmsBanner[]>([])
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [historia, setHistoria] = useState<CmsHistoriaEntry[]>([])
@@ -131,8 +124,7 @@ export default function AdminPage() {
   const [hydrated, setHydrated] = useState(false)
 
   const reloadAll = useCallback(async () => {
-    const [b, m, e, t, a, h, pl, msgs, unread] = await Promise.all([
-      getBanners(),
+    const [m, e, t, a, h, pl, msgs, unread] = await Promise.all([
       getMinisterios(),
       getEventos(),
       getTextos(),
@@ -142,7 +134,6 @@ export default function AdminPage() {
       getMensagens(),
       getMensagensNaoLidas(),
     ])
-    setBanners(b)
     setMinisterios(m)
     setEventos(e)
     setTextos(t)
@@ -181,7 +172,6 @@ export default function AdminPage() {
     { id: 'igreja', label: 'Igreja', icon: Building2 },
     { id: 'pastor', label: 'Pastor', icon: UserCircle2 },
     { id: 'historia', label: 'História', icon: History },
-    { id: 'banners', label: 'Banners', icon: ImageIcon },
     { id: 'ministerios', label: 'Ministérios', icon: Users },
     { id: 'eventos', label: 'Eventos e Datas', icon: Calendar },
     { id: 'textos', label: 'Textos do Site', icon: FileText },
@@ -194,7 +184,6 @@ export default function AdminPage() {
   ]
 
   const stats = [
-    { label: 'Banners ativos', value: banners.length, color: 'bg-primary' },
     { label: 'Ministérios', value: ministerios.length, color: 'bg-accent' },
     { label: 'Eventos agendados', value: eventos.length, color: 'bg-brand-blue' },
     {
@@ -337,31 +326,6 @@ export default function AdminPage() {
             onSaveTextos={(updated) => {
               setTextos((prev) => ({ ...prev, ...updated }))
               toast.success('Textos da página /história atualizados.')
-            }}
-          />
-        )}
-
-        {tab === 'banners' && (
-          <BannersEditor
-            items={banners}
-            onCreate={async (b) => {
-              const created = await createBanner(b)
-              setBanners((prev) => [...prev, created])
-              toast.success('Banner criado.')
-            }}
-            onUpdate={async (b) => {
-              const saved = await upsertBanner(b)
-              setBanners((prev) =>
-                prev.some((x) => x.id === b.id)
-                  ? prev.map((x) => (x.id === b.id ? saved : x))
-                  : [...prev.filter((x) => x.id !== b.id), saved]
-              )
-              toast.success('Banner salvo.')
-            }}
-            onDelete={async (id) => {
-              await deleteBanner(id)
-              setBanners((prev) => prev.filter((x) => x.id !== id))
-              toast.success('Banner removido.')
             }}
           />
         )}
@@ -829,48 +793,6 @@ function CardsEditor<T extends { id: string }>({
 }
 
 // ======================== Editores específicos ========================
-
-function BannersEditor({
-  items,
-  onCreate,
-  onUpdate,
-  onDelete,
-}: {
-  items: CmsBanner[]
-  onCreate: (b: Omit<CmsBanner, 'id'>) => Promise<void>
-  onUpdate: (b: CmsBanner) => Promise<void>
-  onDelete: (id: string) => Promise<void>
-}) {
-  return (
-    <CardsEditor<CmsBanner>
-      items={items}
-      onCreate={onCreate}
-      onUpdate={onUpdate}
-      onDelete={onDelete}
-      fields={[
-        { key: 'preHeadline', label: 'Pré-headline (opcional, máx 50 chars)', type: 'text' },
-        { key: 'title', label: 'Título', type: 'text' },
-        { key: 'subtitle', label: 'Subtítulo', type: 'textarea' },
-        { key: 'imageUrl', label: 'Imagem do banner', type: 'image', hint: IMAGE_HINTS.banner },
-        { key: 'buttonText', label: 'Texto do botão', type: 'text' },
-        { key: 'link', label: 'Link', type: 'text' },
-      ]}
-      makeNew={() => ({
-        preHeadline: null,
-        title: 'Novo banner',
-        subtitle: '',
-        imageUrl: 'https://images.unsplash.com/photo-1438032005730-c779502df39b?w=1200&q=80',
-        buttonText: 'Saiba mais',
-        link: '/',
-        sortOrder: items.length,
-      })}
-      title="Banners do Carrossel"
-      description="Edite títulos, imagens e chamadas dos banners da página inicial."
-      preview={(b) => ({ title: b.title, subtitle: b.subtitle ?? undefined, imageUrl: b.imageUrl })}
-      help={{ label: 'Sobre os banners', body: 'Os banners aparecem no carrossel da página inicial. Cada um tem uma imagem de fundo, título, subtítulo e um botão com link. O visitante pode arrastar para ver os próximos banners.' }}
-    />
-  )
-}
 
 function MinisteriosEditor({
   items,
