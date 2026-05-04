@@ -178,7 +178,7 @@ export default function Home() {
                 <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] uppercase tracking-[.16em] text-white/70 mb-auto">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                    {next ? (next.isLive ? 'Ao vivo' : 'Próximo') : 'Programação'}
+                    {next ? (next.isLive ? 'Ao vivo' : next.event?.isSpecial ? 'Evento' : 'Culto regular') : 'Programação'}
                   </span>
                 </div>
 
@@ -188,7 +188,11 @@ export default function Home() {
                     <>
                       <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/90 mb-3 sm:mb-4" style={{ textShadow: '0 1px 6px rgba(0,0,0,.5)' }}>
                         <span className="pulse-dot" style={{ background: 'var(--accent)', animationName: 'pulseCyan' }} />
-                        {next.isLive ? 'Acontecendo agora' : 'Próximo culto'}
+                        {next.isLive
+                          ? 'Acontecendo agora'
+                          : next.event?.isSpecial
+                            ? 'Próximo evento'
+                            : 'Programação semanal'}
                       </div>
                       <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]" style={{ textShadow: '0 2px 12px rgba(0,0,0,.5)' }}>
                         {next.event?.title || 'Culto da Família'}.
