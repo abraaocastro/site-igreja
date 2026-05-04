@@ -6,7 +6,7 @@ import { MapPin, Clock, Send, Loader2, MessageCircle, ArrowUpRight } from 'lucid
 import { toast } from 'sonner'
 import {
   getChurch, formatAddressOneLine, formatPhone,
-  whatsappHref, getMapsDirectionsUrl, type Church,
+  whatsappHref, getMapsDirectionsUrl, getMapsEmbedUrl, type Church,
 } from '@/lib/site-data'
 import { getChurchEffective } from '@/lib/cms'
 import { cn } from '@/lib/utils'
@@ -152,15 +152,18 @@ export default function ContatoPage() {
               </div>
 
               {/* Map */}
-              <a href={mapsUrl} target="_blank" rel="noreferrer" className="block rounded-[22px] overflow-hidden border border-border hover:border-foreground transition-colors" style={{ minHeight: 200 }}>
-                <div className="w-full h-[200px] relative" style={{
-                  background: 'linear-gradient(160deg, rgba(10,41,115,.5), rgba(2,11,33,.2) 70%), repeating-linear-gradient(135deg, var(--surface-3) 0 24px, var(--surface-2) 24px 48px)',
-                }}>
-                  <span className="absolute top-4 left-4 inline-flex items-center gap-2 h-8 px-3.5 bg-background/95 border border-border rounded-full text-xs font-medium">
-                    <MapPin className="h-3 w-3" /> Ver no mapa <ArrowUpRight className="h-3 w-3" />
-                  </span>
-                </div>
-              </a>
+              <div className="rounded-[22px] overflow-hidden border border-border" style={{ height: 220 }}>
+                <iframe
+                  src={getMapsEmbedUrl()}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Localização da igreja no mapa"
+                />
+              </div>
             </div>
           </div>
         </div>

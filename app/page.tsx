@@ -16,7 +16,7 @@ import {
   type CmsEvento,
   type CmsTextos,
 } from '@/lib/cms'
-import { getChurch, formatAddressOneLine } from '@/lib/site-data'
+import { getChurch, formatAddressOneLine, getMapsEmbedUrl } from '@/lib/site-data'
 import { getNextEvent, getWeekEvents, countdown, type UpcomingEvent } from '@/lib/next-event'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
@@ -162,7 +162,6 @@ export default function Home() {
               {nextEventImage && (
                 <div className="absolute inset-0 z-0">
                   <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${nextEventImage})` }} />
-                  {/* Gradient: imagem visível no topo, escurece no meio e embaixo */}
                   <div className="absolute inset-0" style={{
                     background: 'linear-gradient(to bottom, rgba(2,11,33,.25) 0%, rgba(2,11,33,.55) 30%, rgba(2,11,33,.88) 55%, rgba(2,11,33,.97) 75%)',
                   }} />
@@ -172,51 +171,63 @@ export default function Home() {
               <div className="absolute inset-0 z-0 pointer-events-none" style={{
                 background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.25), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.18), transparent 50%)',
               }} />
-              {/* Grain */}
               <div className="bg-grain absolute inset-0 z-0 pointer-events-none" />
 
               <div className="relative z-10 p-5 sm:p-6 lg:p-7 h-full flex flex-col">
-                {/* Top chrome — empurrado pro topo */}
+                {/* Top chrome */}
                 <div className="flex items-center justify-between font-mono text-[10px] sm:text-[11px] uppercase tracking-[.16em] text-white/70 mb-auto">
                   <span className="inline-flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                    {next?.isLive ? 'Ao vivo' : 'Próximo'}
+                    {next ? (next.isLive ? 'Ao vivo' : 'Próximo') : 'Programação'}
                   </span>
                 </div>
 
-                {/* Countdown block — empurrado pra baixo */}
+                {/* Content — empurrado pra baixo */}
                 <div className="mt-auto pt-6">
-                  <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/90 mb-3 sm:mb-4" style={{ textShadow: '0 1px 6px rgba(0,0,0,.5)' }}>
-                    <span className="pulse-dot" style={{ background: 'var(--accent)', animationName: 'pulseCyan' }} />
-                    {next?.isLive ? 'Acontecendo agora' : 'Próximo culto'}
-                  </div>
+                  {next ? (
+                    <>
+                      <div className="inline-flex items-center gap-2 font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/90 mb-3 sm:mb-4" style={{ textShadow: '0 1px 6px rgba(0,0,0,.5)' }}>
+                        <span className="pulse-dot" style={{ background: 'var(--accent)', animationName: 'pulseCyan' }} />
+                        {next.isLive ? 'Acontecendo agora' : 'Próximo culto'}
+                      </div>
+                      <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]" style={{ textShadow: '0 2px 12px rgba(0,0,0,.5)' }}>
+                        {next.event?.title || 'Culto da Família'}.
+                      </div>
+                      <div className="font-mono text-[10px] sm:text-xs text-white/70 tracking-[.08em] uppercase mb-5 sm:mb-6" style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}>
+                        {next.event
+                          ? `${next.event.weekday} · ${next.event.time} · Templo Sede`
+                          : 'Domingo · 19:00 · Templo Sede'}
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3.5 mb-5 sm:mb-6">
+                        {(['d','h','m','s'] as const).map((k, i) => {
+                          const labels = ['Dias', 'Horas', 'Min', 'Seg']
+                          const val = [next.d, next.h, next.m, next.s][i]
+                          return (
+                            <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18] backdrop-blur-sm bg-white/[.04] rounded-lg">
+                              <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]" style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
+                                {String(val).padStart(2, '0')}
+                              </div>
+                              <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/60 mt-1.5 sm:mt-2">{labels[i]}</div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    /* Estado vazio — sem próximo evento */
+                    <div className="text-center py-8">
+                      <div className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[.18em] text-white/60 mb-4">Nenhum evento programado</div>
+                      <div className="font-serif leading-[0.95] tracking-tight mb-4 text-[clamp(24px,5vw,44px)]" style={{ textShadow: '0 2px 12px rgba(0,0,0,.5)' }}>
+                        Acompanhe nossa<br />programação.
+                      </div>
+                      <p className="text-sm text-white/60 max-w-[36ch] mx-auto mb-6">
+                        Novos eventos e cultos são adicionados regularmente. Fique de olho no calendário.
+                      </p>
+                    </div>
+                  )}
 
-                  <div className="font-serif leading-[0.95] tracking-tight mb-1.5 text-[clamp(28px,6vw,56px)]" style={{ textShadow: '0 2px 12px rgba(0,0,0,.5)' }}>
-                    {next?.event?.title || 'Culto da Família'}.
-                  </div>
-                  <div className="font-mono text-[10px] sm:text-xs text-white/70 tracking-[.08em] uppercase mb-5 sm:mb-6" style={{ textShadow: '0 1px 4px rgba(0,0,0,.4)' }}>
-                    {next?.event
-                      ? `${next.event.weekday} · ${next.event.time} · Templo Sede`
-                      : 'Domingo · 19:00 · Templo Sede'}
-                  </div>
-
-                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 lg:gap-3.5 mb-5 sm:mb-6">
-                    {(['d','h','m','s'] as const).map((k, i) => {
-                      const labels = ['Dias', 'Horas', 'Min', 'Seg']
-                      const val = next ? [next.d, next.h, next.m, next.s][i] : 0
-                      return (
-                        <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18] backdrop-blur-sm bg-white/[.04] rounded-lg">
-                          <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]" style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
-                            {String(val).padStart(2, '0')}
-                          </div>
-                          <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/60 mt-1.5 sm:mt-2">{labels[i]}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* CTAs */}
-                  <div className="flex gap-2 sm:gap-2.5">
+                  {/* CTAs — sempre visíveis */}
+                  <div className="flex gap-2 sm:gap-2.5 mt-5 sm:mt-6">
                     {assistirExternal ? (
                       <a href={assistirUrl} target="_blank" rel="noreferrer"
                         className={cn('flex-1 h-10 sm:h-11 rounded-full inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-medium transition-all',
@@ -420,7 +431,7 @@ export default function Home() {
       </section>
 
       {/* ════════ EVENTOS (dark section) ════════ */}
-      <section className="py-28 lg:py-32 relative overflow-hidden" style={{ background: 'var(--foreground)', color: 'var(--background)' }}>
+      <section className="py-28 lg:py-32 relative overflow-hidden bg-brand-navy text-white">
         <div className="absolute top-[-10vh] right-[-10vw] w-[60vw] h-[60vw] max-w-[700px] max-h-[700px] pointer-events-none" style={{
           background: 'radial-gradient(circle, rgba(0,194,255,.18), transparent 60%)',
         }} />
@@ -541,18 +552,18 @@ export default function Home() {
       <section className="py-28 lg:py-32">
         <div className="mx-auto max-w-[1320px] px-6 md:px-10">
           <div className="rounded-[24px] lg:rounded-[32px] overflow-hidden border border-border bg-surface grid grid-cols-1 lg:grid-cols-[5fr_7fr]">
-            {/* Map placeholder */}
-            <div className="relative min-h-[240px] lg:min-h-[480px] overflow-hidden" style={{
-              background: 'linear-gradient(160deg, rgba(10,41,115,.6), rgba(2,11,33,.2) 70%), repeating-linear-gradient(135deg, var(--surface-3) 0 24px, var(--surface-2) 24px 48px)',
-            }}>
-              <span className="absolute top-[22px] left-[22px] inline-flex items-center gap-2 h-8 px-3.5 bg-background/95 border border-border rounded-full text-xs font-medium">
-                <MapPin className="h-3 w-3" /> R. Eldorado, 30 · Capim Grosso
-              </span>
-              <div className="absolute bottom-[22px] left-[22px] right-[22px] text-white/85 font-mono text-[11px] tracking-[.14em] flex gap-[18px] flex-wrap uppercase">
-                <span>11°31&apos;S</span>
-                <span>40°00&apos;W</span>
-                <span>Templo Sede</span>
-              </div>
+            {/* Google Maps embed */}
+            <div className="relative min-h-[240px] lg:min-h-[480px] overflow-hidden bg-surface-2">
+              <iframe
+                src={getMapsEmbedUrl()}
+                width="100%"
+                height="100%"
+                style={{ border: 0, position: 'absolute', inset: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Localização da igreja no mapa"
+              />
             </div>
 
             {/* Body */}
