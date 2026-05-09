@@ -166,9 +166,9 @@ export default function LoginPage() {
                 />
                 <span className="text-sm text-muted-foreground">Lembrar-me</span>
               </label>
-              <a href="#" className="text-sm text-primary hover:underline">
+              <Link href="/login/recuperar" className="text-sm text-primary hover:underline">
                 Esqueceu a senha?
-              </a>
+              </Link>
             </div>
 
             <button
