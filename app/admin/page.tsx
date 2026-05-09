@@ -92,6 +92,7 @@ import { HelpHint } from '@/components/help-hint'
 import { CalendarPreview } from '@/components/admin/calendar-preview'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes'
 
 type Tab =
   | 'overview'
@@ -110,6 +111,16 @@ export default function AdminPage() {
   const { user, profile, logout, loading } = useAuth()
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('overview')
+  const [isDirty, setIsDirty] = useState(false)
+  const { confirmIfDirty } = useUnsavedChanges(isDirty)
+
+  // Troca de tab com proteção contra edições não salvas
+  const switchTab = (newTab: Tab) => {
+    confirmIfDirty(() => {
+      setTab(newTab)
+      setIsDirty(false)
+    })
+  }
 
   // Estado vindo do banco — começa vazio, hidrata via useEffect.
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
@@ -249,7 +260,7 @@ export default function AdminPage() {
           {tabs.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => switchTab(t.id)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition',
                 tab === t.id
@@ -283,8 +294,10 @@ export default function AdminPage() {
             value={aviso}
             onSaved={(saved) => {
               setAviso(saved)
+              setIsDirty(false)
               toast.success(saved.ativo ? 'Aviso publicado.' : 'Aviso salvo (desativado).')
             }}
+            onDirtyChange={setIsDirty}
           />
         )}
 
@@ -293,8 +306,10 @@ export default function AdminPage() {
             textos={textos}
             onSaved={(updated) => {
               setTextos((prev) => ({ ...prev, ...updated }))
+              setIsDirty(false)
               toast.success('Dados da igreja atualizados.')
             }}
+            onDirtyChange={setIsDirty}
           />
         )}
 
@@ -303,8 +318,10 @@ export default function AdminPage() {
             textos={textos}
             onSaved={(updated) => {
               setTextos((prev) => ({ ...prev, ...updated }))
+              setIsDirty(false)
               toast.success('Dados do pastor atualizados.')
             }}
+            onDirtyChange={setIsDirty}
           />
         )}
 
@@ -421,8 +438,10 @@ export default function AdminPage() {
             onSave={async (next) => {
               await saveTextos(next)
               setTextos(next)
+              setIsDirty(false)
               toast.success('Textos atualizados.')
             }}
+            onDirtyChange={setIsDirty}
           />
         )}
 
@@ -1037,15 +1056,18 @@ const SEVERIDADES: Array<{
 function AvisosEditor({
   value,
   onSaved,
+  onDirtyChange,
 }: {
   value: ChurchAviso
   onSaved: (saved: ChurchAviso) => void
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<ChurchAviso>(value)
   const [busy, setBusy] = useState(false)
   useEffect(() => setDraft(value), [value])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(value)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   const save = async () => {
     setBusy(true)
@@ -1242,13 +1264,18 @@ function AvisosEditor({
 function TextosEditor({
   value,
   onSave,
+  onDirtyChange,
 }: {
   value: CmsTextos
   onSave: (next: CmsTextos) => Promise<void>
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const [draft, setDraft] = useState<CmsTextos>(value)
   const [busy, setBusy] = useState(false)
   useEffect(() => setDraft(value), [value])
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(value)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   const fields: Array<{ key: string; label: string; textarea?: boolean }> = [
     { key: 'homeTitulo', label: 'Título de boas-vindas' },
@@ -1383,9 +1410,11 @@ const IGREJA_GROUPS: Array<{ id: 'marca' | 'identidade' | 'endereco' | 'contato'
 function IgrejaEditor({
   textos,
   onSaved,
+  onDirtyChange,
 }: {
   textos: CmsTextos
   onSaved: (updated: CmsTextos) => void
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   // Inicializa com o que já está salvo + placeholders vazios pras chaves novas
   const initial: CmsTextos = {}
@@ -1404,6 +1433,7 @@ function IgrejaEditor({
   }, [textos])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   const save = async () => {
     setBusy(true)
@@ -1514,9 +1544,11 @@ const PASTOR_FIELDS: Array<{ key: string; label: string; placeholder?: string }>
 function PastorEditor({
   textos,
   onSaved,
+  onDirtyChange,
 }: {
   textos: CmsTextos
   onSaved: (updated: CmsTextos) => void
+  onDirtyChange?: (dirty: boolean) => void
 }) {
   const initial: CmsTextos = {
     pastorNome: textos.pastorNome ?? '',
@@ -1539,6 +1571,7 @@ function PastorEditor({
   }, [textos])
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial)
+  useEffect(() => { onDirtyChange?.(dirty) }, [dirty, onDirtyChange])
 
   const save = async () => {
     setBusy(true)
