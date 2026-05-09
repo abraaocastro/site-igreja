@@ -71,6 +71,10 @@ import {
   getMensagensNaoLidas,
   marcarMensagemLida,
   deleteMensagem,
+  getCultosRecorrentes,
+  createCultoRecorrente,
+  upsertCultoRecorrente,
+  deleteCultoRecorrente,
   saveTextos,
   saveAviso,
   uploadImage,
@@ -81,6 +85,7 @@ import {
   type CmsHistoriaEntry,
   type CmsPlanoLeituraDay,
   type CmsContatoMensagem,
+  type CmsCultoRecorrente,
 } from '@/lib/cms'
 import { AvisoBanner } from '@/components/aviso-banner'
 import { HelpHint } from '@/components/help-hint'
@@ -112,6 +117,7 @@ export default function AdminPage() {
   const [historia, setHistoria] = useState<CmsHistoriaEntry[]>([])
   const [plano, setPlano] = useState<CmsPlanoLeituraDay[]>([])
   const [mensagens, setMensagens] = useState<CmsContatoMensagem[]>([])
+  const [cultosRec, setCultosRec] = useState<CmsCultoRecorrente[]>([])
   const [naoLidas, setNaoLidas] = useState(0)
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
   const [aviso, setAviso] = useState<ChurchAviso>({
@@ -124,7 +130,7 @@ export default function AdminPage() {
   const [hydrated, setHydrated] = useState(false)
 
   const reloadAll = useCallback(async () => {
-    const [m, e, t, a, h, pl, msgs, unread] = await Promise.all([
+    const [m, e, t, a, h, pl, msgs, unread, cr] = await Promise.all([
       getMinisterios(),
       getEventos(),
       getTextos(),
@@ -133,6 +139,7 @@ export default function AdminPage() {
       getPlanoLeitura(),
       getMensagens(),
       getMensagensNaoLidas(),
+      getCultosRecorrentes(),
     ])
     setMinisterios(m)
     setEventos(e)
@@ -142,6 +149,7 @@ export default function AdminPage() {
     setPlano(pl)
     setMensagens(msgs)
     setNaoLidas(unread)
+    setCultosRec(cr)
     setHydrated(true)
   }, [])
 
@@ -356,28 +364,55 @@ export default function AdminPage() {
         )}
 
         {tab === 'eventos' && (
-          <EventosEditor
-            items={eventos}
-            onCreate={async (e) => {
-              const created = await createEvento(e)
-              setEventos((prev) => [...prev, created])
-              toast.success('Evento criado.')
-            }}
-            onUpdate={async (e) => {
-              const saved = await upsertEvento(e)
-              setEventos((prev) =>
-                prev.some((x) => x.id === e.id)
-                  ? prev.map((x) => (x.id === e.id ? saved : x))
-                  : [...prev.filter((x) => x.id !== e.id), saved]
-              )
-              toast.success('Evento salvo.')
-            }}
-            onDelete={async (id) => {
-              await deleteEvento(id)
-              setEventos((prev) => prev.filter((x) => x.id !== id))
-              toast.success('Evento removido.')
-            }}
-          />
+          <div className="space-y-10">
+            <EventosEditor
+              items={eventos}
+              onCreate={async (e) => {
+                const created = await createEvento(e)
+                setEventos((prev) => [...prev, created])
+                toast.success('Evento criado.')
+              }}
+              onUpdate={async (e) => {
+                const saved = await upsertEvento(e)
+                setEventos((prev) =>
+                  prev.some((x) => x.id === e.id)
+                    ? prev.map((x) => (x.id === e.id ? saved : x))
+                    : [...prev.filter((x) => x.id !== e.id), saved]
+                )
+                toast.success('Evento salvo.')
+              }}
+              onDelete={async (id) => {
+                await deleteEvento(id)
+                setEventos((prev) => prev.filter((x) => x.id !== id))
+                toast.success('Evento removido.')
+              }}
+            />
+
+            <hr className="border-border" />
+
+            <CultosRecorrentesEditor
+              items={cultosRec}
+              onCreate={async (c) => {
+                const created = await createCultoRecorrente(c)
+                setCultosRec((prev) => [...prev, created].sort((a, b) => a.sortOrder - b.sortOrder))
+                toast.success('Culto recorrente criado.')
+              }}
+              onUpdate={async (c) => {
+                const saved = await upsertCultoRecorrente(c)
+                setCultosRec((prev) =>
+                  prev.some((x) => x.id === c.id)
+                    ? prev.map((x) => (x.id === c.id ? saved : x))
+                    : [...prev.filter((x) => x.id !== c.id), saved]
+                )
+                toast.success('Culto recorrente salvo.')
+              }}
+              onDelete={async (id) => {
+                await deleteCultoRecorrente(id)
+                setCultosRec((prev) => prev.filter((x) => x.id !== id))
+                toast.success('Culto recorrente removido.')
+              }}
+            />
+          </div>
         )}
 
         {tab === 'textos' && (
@@ -1813,6 +1848,74 @@ function PlanoLeituraEditor({
         subtitle: `${p.livro} ${p.capitulos}`,
       })}
       help={{ label: 'Sobre o plano de leitura', body: 'O plano de leitura aparece na página /plano-leitura. Os visitantes podem marcar os dias como concluídos e acompanhar o progresso. Use o campo "Ordem" para definir a sequência dos dias.' }}
+    />
+  )
+}
+
+// ======================== CultosRecorrentesEditor ========================
+
+const DIAS_SEMANA = [
+  { value: '0', label: 'Domingo' },
+  { value: '1', label: 'Segunda' },
+  { value: '2', label: 'Terça' },
+  { value: '3', label: 'Quarta' },
+  { value: '4', label: 'Quinta' },
+  { value: '5', label: 'Sexta' },
+  { value: '6', label: 'Sábado' },
+]
+
+function CultosRecorrentesEditor({
+  items,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: {
+  items: CmsCultoRecorrente[]
+  onCreate: (c: Omit<CmsCultoRecorrente, 'id'>) => Promise<void>
+  onUpdate: (c: CmsCultoRecorrente) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+}) {
+  const coerce = <T extends { diaSemana: number | string; sortOrder: number | string }>(c: T): T => ({
+    ...c,
+    diaSemana: typeof c.diaSemana === 'number' ? c.diaSemana : parseInt(String(c.diaSemana || '0'), 10) || 0,
+    sortOrder: typeof c.sortOrder === 'number' ? c.sortOrder : parseInt(String(c.sortOrder || '0'), 10) || 0,
+  })
+
+  return (
+    <CardsEditor<CmsCultoRecorrente>
+      items={items}
+      onCreate={(c) => onCreate(coerce(c))}
+      onUpdate={(c) => onUpdate(coerce(c))}
+      onDelete={onDelete}
+      fields={[
+        { key: 'titulo', label: 'Nome do culto', type: 'text' },
+        { key: 'descricao', label: 'Descrição', type: 'textarea' },
+        { key: 'diaSemana', label: 'Dia da semana (0=Dom, 1=Seg, ..., 6=Sáb)', type: 'select', options: DIAS_SEMANA.map(d => d.value) },
+        { key: 'horario', label: 'Início', type: 'time' },
+        { key: 'horarioFim', label: 'Término', type: 'time' },
+        { key: 'local', label: 'Local', type: 'text' },
+        { key: 'categoria', label: 'Categoria', type: 'select', options: ['culto', 'estudo', 'batismo', 'encontro', 'escola', 'evento'] },
+        { key: 'imageUrl', label: 'Imagem (aparece no banner da home)', type: 'image', hint: IMAGE_HINTS.evento },
+      ]}
+      makeNew={() => ({
+        titulo: 'Novo culto',
+        descricao: '',
+        diaSemana: 0,
+        horario: '19:00',
+        horarioFim: '20:30',
+        local: 'Templo Sede',
+        categoria: 'culto',
+        imageUrl: null,
+        sortOrder: items.length,
+      })}
+      title="Cultos Recorrentes (semanais)"
+      description="Cultos que acontecem toda semana no mesmo dia e horário. A imagem cadastrada aqui aparece no banner da página inicial."
+      preview={(c) => ({
+        title: `${DIAS_SEMANA.find(d => String(d.value) === String(c.diaSemana))?.label || 'Dia ?'} · ${c.titulo}`,
+        subtitle: `${c.horario}–${c.horarioFim} · ${c.local}`,
+        imageUrl: c.imageUrl,
+      })}
+      help={{ label: 'Sobre cultos recorrentes', body: 'Cultos semanais fixos (ex: Culto de Domingo, Quarta de Oração). A imagem que você cadastrar aqui será exibida no banner/card da página inicial quando este for o próximo culto. Diferente dos "Eventos" acima, que são para datas específicas (conferências, batismos, etc).' }}
     />
   )
 }

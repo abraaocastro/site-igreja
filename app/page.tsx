@@ -11,10 +11,12 @@ import {
   getMinisterios,
   getEventos,
   getTextos,
+  getCultosRecorrentes,
   DEFAULT_TEXTOS,
   type CmsMinisterio,
   type CmsEvento,
   type CmsTextos,
+  type CmsCultoRecorrente,
 } from '@/lib/cms'
 import { getChurch, formatAddressOneLine, getMapsEmbedUrl } from '@/lib/site-data'
 import { getNextEvent, getWeekEvents, countdown, type UpcomingEvent } from '@/lib/next-event'
@@ -23,7 +25,7 @@ import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 // ── Countdown hook ──
-function useNextEventCountdown(eventos: CmsEvento[]) {
+function useNextEventCountdown(eventos: CmsEvento[], cultos: CmsCultoRecorrente[]) {
   const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
     setNow(new Date())
@@ -32,7 +34,7 @@ function useNextEventCountdown(eventos: CmsEvento[]) {
   }, [])
   return useMemo(() => {
     if (!now) return null
-    const nextEvt = getNextEvent(eventos, now)
+    const nextEvt = getNextEvent(eventos, cultos, now)
     if (!nextEvt) return null
     const started = now.getTime() >= nextEvt.datetime.getTime()
     const ended = now.getTime() >= nextEvt.endDatetime.getTime()
@@ -44,7 +46,7 @@ function useNextEventCountdown(eventos: CmsEvento[]) {
     const c = countdown(now, nextEvt.datetime)
     const isImminent = nextEvt.datetime.getTime() - now.getTime() < 24 * 60 * 60 * 1000
     return { ...c, event: nextEvt, isImminent, isLive: false }
-  }, [now, eventos])
+  }, [now, eventos, cultos])
 }
 
 export default function Home() {
@@ -52,23 +54,19 @@ export default function Home() {
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
+  const [cultosRec, setCultosRec] = useState<CmsCultoRecorrente[]>([])
 
   useEffect(() => {
-    Promise.all([getMinisterios(), getEventos(), getTextos()]).then(([m, e, t]) => {
-      setMinisterios(m); setEventos(e); setTextos(t)
+    Promise.all([getMinisterios(), getEventos(), getTextos(), getCultosRecorrentes()]).then(([m, e, t, cr]) => {
+      setMinisterios(m); setEventos(e); setTextos(t); setCultosRec(cr)
     })
   }, [])
 
-  const next = useNextEventCountdown(eventos)
-  const weekEvents = useMemo(() => getWeekEvents(eventos), [eventos])
+  const next = useNextEventCountdown(eventos, cultosRec)
+  const weekEvents = useMemo(() => getWeekEvents(eventos, cultosRec), [eventos, cultosRec])
 
-  // Imagem do próximo evento (para o card hero)
-  const nextEventImage = useMemo(() => {
-    if (!next?.event) return null
-    // Procurar evento especial do CMS que tem imagem
-    const match = eventos.find(e => e.title === next.event!.title && e.imageUrl)
-    return match?.imageUrl ?? null
-  }, [next, eventos])
+  // Imagem do próximo evento (recorrente ou especial — ambos podem ter imageUrl)
+  const nextEventImage = next?.event?.imageUrl ?? null
   const proximosEventos = [...eventos]
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
     .filter((e) => new Date(e.date) >= new Date(new Date().toDateString()))
@@ -157,7 +155,7 @@ export default function Home() {
             </div>
 
             {/* RIGHT — countdown feature card */}
-            <div className="relative rounded-[18px] sm:rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[340px] sm:min-h-[380px] lg:min-h-[560px]">
+            <div className="relative rounded-[18px] sm:rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[440px] sm:min-h-[460px] lg:min-h-[560px]">
               {/* Background image from next event */}
               {nextEventImage && (
                 <div className="absolute inset-0 z-0">
@@ -208,7 +206,7 @@ export default function Home() {
                           const val = [next.d, next.h, next.m, next.s][i]
                           return (
                             <div key={k} className="text-center py-2.5 sm:py-3 lg:py-4 border-t border-b border-white/[.18] backdrop-blur-sm bg-white/[.04] rounded-lg">
-                              <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(28px,6vw,64px)]" style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
+                              <div className="font-serif font-normal leading-[0.9] tracking-tight tabular-nums text-[clamp(24px,5vw,64px)]" style={{ textShadow: '0 2px 8px rgba(0,0,0,.4)' }}>
                                 {String(val).padStart(2, '0')}
                               </div>
                               <div className="font-mono text-[7px] sm:text-[8px] lg:text-[9px] uppercase tracking-[.2em] text-white/60 mt-1.5 sm:mt-2">{labels[i]}</div>

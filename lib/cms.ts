@@ -103,6 +103,19 @@ export interface CmsContatoMensagem {
   createdAt: string
 }
 
+export interface CmsCultoRecorrente {
+  id: string
+  diaSemana: number  // 0=Dom, 1=Seg, ..., 6=Sáb
+  horario: string
+  horarioFim: string
+  titulo: string
+  descricao: string
+  local: string
+  categoria: string
+  imageUrl: string | null
+  sortOrder: number
+}
+
 export const DEFAULT_TEXTOS: CmsTextos = {
   homeTitulo: 'Bem-vindo à Nossa Igreja',
   homeSubtitulo:
@@ -262,6 +275,42 @@ const planoToRow = (p: Partial<CmsPlanoLeituraDay>): Partial<PlanoLeituraRow> =>
   ...(p.sortOrder !== undefined && { sort_order: p.sortOrder }),
 })
 
+interface CultoRecorrenteRow {
+  id: string
+  dia_semana: number
+  horario: string
+  horario_fim: string
+  titulo: string
+  descricao: string
+  local: string
+  categoria: string
+  image_url: string | null
+  sort_order: number
+}
+const cultoRecFromRow = (r: CultoRecorrenteRow): CmsCultoRecorrente => ({
+  id: r.id,
+  diaSemana: r.dia_semana,
+  horario: r.horario,
+  horarioFim: r.horario_fim,
+  titulo: r.titulo,
+  descricao: r.descricao,
+  local: r.local,
+  categoria: r.categoria,
+  imageUrl: r.image_url,
+  sortOrder: r.sort_order,
+})
+const cultoRecToRow = (c: Partial<CmsCultoRecorrente>): Partial<CultoRecorrenteRow> => ({
+  ...(c.diaSemana !== undefined && { dia_semana: c.diaSemana }),
+  ...(c.horario !== undefined && { horario: c.horario }),
+  ...(c.horarioFim !== undefined && { horario_fim: c.horarioFim }),
+  ...(c.titulo !== undefined && { titulo: c.titulo }),
+  ...(c.descricao !== undefined && { descricao: c.descricao }),
+  ...(c.local !== undefined && { local: c.local }),
+  ...(c.categoria !== undefined && { categoria: c.categoria }),
+  ...(c.imageUrl !== undefined && { image_url: c.imageUrl }),
+  ...(c.sortOrder !== undefined && { sort_order: c.sortOrder }),
+})
+
 interface AvisoRow {
   id: number
   ativo: boolean
@@ -334,6 +383,13 @@ const DEFAULT_PLANO_LEITURA: CmsPlanoLeituraDay[] = defaultPlanoLeitura.map((p, 
   tema: p.tema,
   sortOrder: p.dia,
 }))
+
+const DEFAULT_CULTOS_RECORRENTES: CmsCultoRecorrente[] = [
+  { id: 'default-0', diaSemana: 0, horario: '09:00', horarioFim: '10:30', titulo: 'Escola Bíblica Dominical', descricao: 'Estudo bíblico para todas as idades.', local: 'Templo Sede', categoria: 'escola', imageUrl: null, sortOrder: 1 },
+  { id: 'default-1', diaSemana: 0, horario: '19:00', horarioFim: '20:30', titulo: 'Culto de Celebração', descricao: 'Culto principal da semana.', local: 'Templo Sede', categoria: 'culto', imageUrl: null, sortOrder: 2 },
+  { id: 'default-2', diaSemana: 3, horario: '19:30', horarioFim: '21:00', titulo: 'Culto de Oração e Estudo', descricao: 'Estudo bíblico e oração comunitária.', local: 'Templo Sede', categoria: 'estudo', imageUrl: null, sortOrder: 3 },
+  { id: 'default-3', diaSemana: 6, horario: '19:30', horarioFim: '21:00', titulo: 'Encontro de Jovens', descricao: 'Reunião semanal da juventude.', local: 'Templo Sede', categoria: 'encontro', imageUrl: null, sortOrder: 4 },
+]
 
 // ============================================================
 // READERS — Public (anon RLS-allowed)
@@ -433,6 +489,17 @@ export async function getPlanoLeitura(): Promise<CmsPlanoLeituraDay[]> {
     if (error || !data || data.length === 0) return DEFAULT_PLANO_LEITURA
     return data.map(planoFromRow)
   }, DEFAULT_PLANO_LEITURA)
+}
+
+export async function getCultosRecorrentes(): Promise<CmsCultoRecorrente[]> {
+  return safeRead(async (sb) => {
+    const { data, error } = await sb
+      .from('cms_cultos_recorrentes')
+      .select('id,dia_semana,horario,horario_fim,titulo,descricao,local,categoria,image_url,sort_order')
+      .order('sort_order', { ascending: true })
+    if (error || !data || data.length === 0) return DEFAULT_CULTOS_RECORRENTES
+    return data.map(cultoRecFromRow)
+  }, DEFAULT_CULTOS_RECORRENTES)
 }
 
 // ============================================================
@@ -833,6 +900,38 @@ export async function upsertPlanoLeitura(p: CmsPlanoLeituraDay): Promise<CmsPlan
 export async function deletePlanoLeitura(id: string): Promise<void> {
   const sb = writerClient()
   const { error } = await sb.from('cms_plano_leitura').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ---------- Cultos Recorrentes ----------
+
+const CULTO_REC_SELECT = 'id,dia_semana,horario,horario_fim,titulo,descricao,local,categoria,image_url,sort_order' as const
+
+export async function createCultoRecorrente(c: Omit<CmsCultoRecorrente, 'id'>): Promise<CmsCultoRecorrente> {
+  const sb = writerClient()
+  const { data, error } = await sb.from('cms_cultos_recorrentes').insert(cultoRecToRow(c)).select(CULTO_REC_SELECT).single()
+  if (error) throw error
+  return cultoRecFromRow(data as CultoRecorrenteRow)
+}
+
+export async function upsertCultoRecorrente(c: CmsCultoRecorrente): Promise<CmsCultoRecorrente> {
+  const sb = writerClient()
+  const isDefault = c.id.startsWith('default-')
+  const payload = cultoRecToRow(c)
+  if (isDefault) {
+    const { data, error } = await sb.from('cms_cultos_recorrentes').insert(payload).select(CULTO_REC_SELECT).single()
+    if (error) throw error
+    return cultoRecFromRow(data as CultoRecorrenteRow)
+  } else {
+    const { data, error } = await sb.from('cms_cultos_recorrentes').update(payload).eq('id', c.id).select(CULTO_REC_SELECT).single()
+    if (error) throw error
+    return cultoRecFromRow(data as CultoRecorrenteRow)
+  }
+}
+
+export async function deleteCultoRecorrente(id: string): Promise<void> {
+  const sb = writerClient()
+  const { error } = await sb.from('cms_cultos_recorrentes').delete().eq('id', id)
   if (error) throw error
 }
 
