@@ -165,16 +165,19 @@ export default function Home() {
               {nextEventImage && (
                 <div className="absolute inset-0 z-0">
                   <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${nextEventImage})` }} />
+                  {/* Gradient: imagem 100% nítida no topo, escurece só na metade inferior onde fica o texto */}
                   <div className="absolute inset-0" style={{
-                    background: 'linear-gradient(to bottom, rgba(2,11,33,.25) 0%, rgba(2,11,33,.55) 30%, rgba(2,11,33,.88) 55%, rgba(2,11,33,.97) 75%)',
+                    background: 'linear-gradient(to bottom, transparent 0%, transparent 35%, rgba(2,11,33,.6) 55%, rgba(2,11,33,.92) 70%, rgba(2,11,33,.98) 85%)',
                   }} />
                 </div>
               )}
-              {/* Glow effects */}
-              <div className="absolute inset-0 z-0 pointer-events-none" style={{
-                background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.25), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.18), transparent 50%)',
-              }} />
-              <div className="bg-grain absolute inset-0 z-0 pointer-events-none" />
+              {/* Glow effects — só quando NÃO tem imagem (para não poluir a foto) */}
+              {!nextEventImage && (
+                <div className="absolute inset-0 z-0 pointer-events-none" style={{
+                  background: 'radial-gradient(circle at 80% 10%, rgba(0,194,255,.25), transparent 50%), radial-gradient(circle at 20% 90%, rgba(111,163,255,.18), transparent 50%)',
+                }} />
+              )}
+              {!nextEventImage && <div className="bg-grain absolute inset-0 z-0 pointer-events-none" />}
 
               <div className="relative z-10 p-5 sm:p-6 lg:p-7 h-full flex flex-col">
                 {/* Top chrome */}

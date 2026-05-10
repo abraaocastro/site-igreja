@@ -513,6 +513,7 @@ const IMAGE_HINTS = {
   generic: 'Dica: imagens em PNG ou JPG. Mínimo 800px no lado maior.',
   logo: 'PNG sem fundo (transparente). Quadrado, mínimo 256×256px. O ideal é 512×512px.',
   banner: 'Imagem horizontal de alta resolução. Recomendado 1920×1080px (16:9). Mínimo 1280×720px.',
+  bannerHome: 'Imagem quadrada (1:1). Recomendado 1080×1080px. Essa imagem aparece no card do banner da página inicial ao lado do contador.',
   pastorFoto: 'Foto quadrada (1:1) com pessoa centralizada. Recomendado 1080×1080px. Aparece em formato circular.',
   ministerio: 'Imagem horizontal (4:3 ou 16:9). Recomendado 1200×800px. Mínimo 800×600px.',
   evento: 'Imagem horizontal (16:9 funciona melhor). Recomendado 1200×675px.',
@@ -1928,7 +1929,7 @@ function CultosRecorrentesEditor({
         { key: 'horarioFim', label: 'Término', type: 'time' },
         { key: 'local', label: 'Local', type: 'text' },
         { key: 'categoria', label: 'Categoria', type: 'select', options: ['culto', 'estudo', 'batismo', 'encontro', 'escola', 'evento'] },
-        { key: 'imageUrl', label: 'Imagem (aparece no banner da home)', type: 'image', hint: IMAGE_HINTS.evento },
+        { key: 'imageUrl', label: 'Imagem (aparece no banner da home)', type: 'image', hint: IMAGE_HINTS.bannerHome },
       ]}
       makeNew={() => ({
         titulo: 'Novo culto',
