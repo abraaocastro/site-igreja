@@ -21,6 +21,7 @@ import {
 import { getChurch, formatAddressOneLine, getMapsEmbedUrl } from '@/lib/site-data'
 import { getNextEvent, getWeekEvents, countdown, type UpcomingEvent } from '@/lib/next-event'
 import { cn } from '@/lib/utils'
+import { SkeletonMinisteriosGrid, SkeletonMinisterioCard, SkeletonEventosList, SkeletonEventoRow, SkeletonCountdownCard } from '@/components/skeleton'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -55,10 +56,11 @@ export default function Home() {
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [textos, setTextos] = useState<CmsTextos>(DEFAULT_TEXTOS)
   const [cultosRec, setCultosRec] = useState<CmsCultoRecorrente[]>([])
+  const [hydrated, setHydrated] = useState(false)
 
   useEffect(() => {
     Promise.all([getMinisterios(), getEventos(), getTextos(), getCultosRecorrentes()]).then(([m, e, t, cr]) => {
-      setMinisterios(m); setEventos(e); setTextos(t); setCultosRec(cr)
+      setMinisterios(m); setEventos(e); setTextos(t); setCultosRec(cr); setHydrated(true)
     })
   }, [])
 
@@ -155,6 +157,9 @@ export default function Home() {
             </div>
 
             {/* RIGHT — countdown feature card */}
+            {!hydrated ? (
+              <SkeletonCountdownCard />
+            ) : (
             <div className="relative rounded-[18px] sm:rounded-[22px] lg:rounded-[28px] overflow-hidden isolate bg-brand-gradient text-white min-h-[440px] sm:min-h-[460px] lg:min-h-[560px]">
               {/* Background image from next event */}
               {nextEventImage && (
@@ -251,6 +256,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* MARQUEE STRIP */}
@@ -398,7 +404,9 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[18px]">
-            {ministeriosFiltrados.map((m, i) => (
+            {!hydrated ? (
+              <>{[...Array(6)].map((_, i) => <SkeletonMinisterioCard key={i} />)}</>
+            ) : ministeriosFiltrados.map((m, i) => (
               <Link key={m.id} href={`/ministerios#${m.id}`}
                 className="group card-soft rounded-[22px] overflow-hidden cursor-pointer">
                 <div className="relative aspect-[4/3] overflow-hidden bg-surface-3">
@@ -448,7 +456,9 @@ export default function Home() {
             </p>
           </div>
 
-          {proximosEventos.length === 0 ? (
+          {!hydrated ? (
+            <SkeletonEventosList count={3} />
+          ) : proximosEventos.length === 0 ? (
             <div className="text-center py-10 text-white/50">Nenhum evento agendado no momento.</div>
           ) : (
             <div className="border-t border-white/[.12]">

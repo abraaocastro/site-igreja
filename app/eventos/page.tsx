@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, MapPin, ArrowUpRight } from 'lucide-react'
 import { getEventos, type CmsEvento } from '@/lib/cms'
+import { SkeletonEventoRow } from '@/components/skeleton'
 import { cn } from '@/lib/utils'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -17,8 +18,9 @@ export default function EventosPage() {
   const [eventos, setEventos] = useState<CmsEvento[]>([])
   const [categoria, setCategoria] = useState('todas')
   const [view, setView] = useState<'proximos' | 'passados'>('proximos')
+  const [hydrated, setHydrated] = useState(false)
 
-  useEffect(() => { let c = false; getEventos().then(r => { if (!c) setEventos(r) }); return () => { c = true } }, [])
+  useEffect(() => { let c = false; getEventos().then(r => { if (!c) { setEventos(r); setHydrated(true) } }); return () => { c = true } }, [])
 
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }, [])
   const categorias = useMemo(() => ['todas', ...Array.from(new Set(eventos.map(e => e.category)))], [eventos])
@@ -77,7 +79,11 @@ export default function EventosPage() {
       {/* Lista */}
       <section className="pb-20 md:pb-28">
         <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
-          {filtered.length === 0 ? (
+          {!hydrated ? (
+            <div className="border-t border-border">
+              {[...Array(3)].map((_, i) => <SkeletonEventoRow key={i} />)}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">
               {view === 'proximos' ? 'Nenhum evento agendado.' : 'Nenhum evento passado encontrado.'}
             </div>

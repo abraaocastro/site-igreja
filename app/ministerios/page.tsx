@@ -5,13 +5,15 @@ import Link from 'next/link'
 import { Search, ArrowUpRight } from 'lucide-react'
 import { getMinisterios, type CmsMinisterio } from '@/lib/cms'
 import { LeadersDisplay } from '@/components/leaders-popover'
+import { SkeletonMinisterioCard } from '@/components/skeleton'
 import { cn } from '@/lib/utils'
 
 export default function MinisteriosPage() {
   const [ministerios, setMinisterios] = useState<CmsMinisterio[]>([])
   const [query, setQuery] = useState('')
+  const [hydrated, setHydrated] = useState(false)
 
-  useEffect(() => { let c = false; getMinisterios().then(r => { if (!c) setMinisterios(r) }); return () => { c = true } }, [])
+  useEffect(() => { let c = false; getMinisterios().then(r => { if (!c) { setMinisterios(r); setHydrated(true) } }); return () => { c = true } }, [])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -51,7 +53,11 @@ export default function MinisteriosPage() {
       {/* Grid */}
       <section className="pb-20 md:pb-28">
         <div className="mx-auto max-w-[1320px] px-4 sm:px-6 md:px-10">
-          {filtered.length === 0 ? (
+          {!hydrated ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[18px]">
+              {[...Array(6)].map((_, i) => <SkeletonMinisterioCard key={i} />)}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground">Nenhum ministério encontrado.</div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[18px]">
