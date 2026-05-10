@@ -179,7 +179,7 @@ export function Header() {
                   {userOpen && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setUserOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl bg-card shadow-xl ring-1 ring-border py-2 z-50 animate-fade-in">
+                      <div className="fixed right-4 left-4 sm:left-auto sm:absolute sm:right-0 top-[70px] sm:top-full sm:mt-2 sm:w-56 rounded-2xl bg-card shadow-xl ring-1 ring-border py-2 z-50 animate-fade-in">
                         <div className="px-4 py-2 border-b border-border">
                           <p className="text-sm font-semibold truncate">{displayName}</p>
                           <p className="text-xs text-muted-foreground truncate">{user.email}</p>
