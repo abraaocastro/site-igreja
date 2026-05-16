@@ -104,20 +104,20 @@ export default function Home() {
               <div className="eyebrow flex items-center gap-3 sm:gap-5 flex-wrap mb-5 lg:mb-9">
                 <span className="inline-flex items-center gap-2">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 21h18M5 21V7l8-4 8 4v14"/></svg>
-                  PIB Capim Grosso
+                  PIBAC Capim Grosso
                 </span>
                 <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
-                <span>Desde 1978</span>
+                <span>Desde 1962</span>
               </div>
 
               {/* Title — smaller on mobile */}
               <h1 className="display display-tight text-[clamp(32px,7.5vw,132px)]">
-                Um lugar<br />
+                Uma Igreja<br />
                 <span className="relative inline-block">
-                  para voltar
+                  de novos
                   <span className="absolute left-0 right-0 bottom-0.5 lg:bottom-1 h-2 lg:h-3.5 bg-accent/35 -z-10 rounded-sm" />
                 </span><br />
-                <span className="text-brand-gradient italic">pra casa.</span>
+                <span className="text-brand-gradient italic">Começos.</span>
               </h1>
 
               {/* Lede — hidden on small mobile to save space */}
@@ -142,8 +142,8 @@ export default function Home() {
               {/* Signals — hidden on mobile, shown sm+ */}
               <div className="hidden sm:grid mt-8 lg:mt-14 border-t border-border pt-5 grid-cols-3 gap-0">
                 {[
-                  { num: '48', sup: 'anos', label: 'de história em Capim Grosso' },
-                  { num: String(ministerios.length || 6), sup: 'min.', label: 'ministérios toda semana' },
+                  { num: '64', sup: 'anos', label: 'de história em Capim Grosso' },
+                  { num: String(ministerios.length || 6), sup: 'ministérios', label: 'em nossa equipe.' },
                   { num: '2x', sup: 'dom.', label: 'cultos · 9h e 19h' },
                 ].map((s, i) => (
                   <div key={i} className={cn('px-2 lg:px-4', i === 0 && 'pl-0', i < 2 && 'border-r border-border')}>
@@ -347,7 +347,7 @@ export default function Home() {
                 <span className="pulse-dot" /> Pastor presidente
               </span>
               <div className="absolute left-[18px] right-[18px] bottom-[18px] text-white">
-                <div className="font-mono text-[10px] opacity-80 tracking-[.14em] uppercase mb-1.5">Liderando desde 2014</div>
+                <div className="font-mono text-[10px] opacity-80 tracking-[.14em] uppercase mb-1.5">Liderando desde 2021</div>
                 <div className="font-serif text-[22px] lg:text-[28px] leading-none tracking-tight">Pr. Silas Barreto</div>
               </div>
             </div>
@@ -392,7 +392,7 @@ export default function Home() {
             <div>
               <div className="eyebrow mb-3.5">— Nossos ministérios</div>
               <h2 className="display max-w-[16ch]" style={{ fontSize: 'clamp(40px, 5vw, 68px)', marginTop: 14 }}>
-                Encontre o seu<br />lugar para servir.
+                Conheça os<br />Ministérios:
               </h2>
             </div>
             <div className="flex flex-wrap gap-1.5 p-1.5 bg-surface-2 rounded-full">
